@@ -111,6 +111,112 @@ class MastodonTextStatusUpdate {
     }
 }
 
+class MastodonPollStatusUpdate {
+    constructor({
+        statusText,
+        pollOptions,
+        expiresIn = 86400,
+        allowMultiole = false,
+        hideTotals = false,
+        inReplyToId = null,
+        sensitive = null,
+        spoilerText = null,
+        visibility = "public",
+        language = null,
+        scheduledAt = null
+    }) {
+        this.statusText = statusText
+        this.pollOptions = pollOptions
+        this.expiresIn = expiresIn
+        this.allowMultiole = allowMultiole
+        this.hideTotals = hideTotals
+        this.inReplyToId = inReplyToId
+        this.sensitive = sensitive
+        this.spoilerText = spoilerText
+        this.visibility = visibility
+        this.language = language
+        this.scheduledAt = scheduledAt
+    }
+    getObject() {
+        let data = {}
+        let pollOptionsObject = {}
+        let isValid = true;
+        let isInvalidReasons = []
+        if (this.statusText.length == 0) {
+            isValid = false
+            isInvalidReasons.push("no status update text (question) was provided")
+        } else {
+            data["status"] = this.statusText
+        }
+        if (this.pollOptions.length == 0) {
+            isValid = false
+            isInvalidReasons.push("no options for poll provided")
+        } else {
+            pollOptionsObject["options"] = this.pollOptions
+        }
+
+        pollOptionsObject["expires_in"] = this.expiresIn
+        pollOptionsObject["multiple"] = this.allowMultiole
+        pollOptionsObject["hide_totals"] = this.hideTotals
+        if (this.inReplyToId) {
+            data["in_reply_to_id"] = this.inReplyToId
+        }
+        if (this.sensitive) {
+            data["sensitive"] = this.sensitive
+        }
+        if (this.spoilerText) {
+            data["spoiler_text"] = this.spoilerText
+        }
+        // check if valid visibility
+        if (MastodonVisibilities.includes(this.visibility.toLocaleLowerCase())) {
+            data["visibility"] = this.visibility.toLocaleLowerCase()
+        } else {
+            isValid = false
+            isInvalidReasons.push("visibility is set to invalid value: " + this.visibility)
+        }
+        if (this.language) {
+            data["language"] = this.language
+        }
+        if (this.scheduledAt) {
+            data["scheduled_at"] = this.scheduledAt
+        }
+        if (isValid) {
+            data["poll"] = pollOptionsObject
+            return data
+        } else {
+            alert("invalid post:" + "\n" + isInvalidReasons.join("\n"))
+            return undefined
+        }
+    }
+    getText() {
+        return this.statusText
+    }
+    // implemented same way for html preview and general easier preview
+    toString() {
+        return this.statusText
+    }
+    toHtmlString() {
+        let str = []
+        if (this.scheduledAt) {
+            let dateTimeSplits = this.scheduledAt.split("T")
+            let date = dateTimeSplits[0]
+            let timeSplits = dateTimeSplits[1].split(":")
+            let time = timeSplits[0] + ":" + timeSplits[1]
+            let scheduledAtStr = date + " at " + time + " (UTC)"
+            str.push("<span class='info'>" + "<em>scheduled at: </em>" + scheduledAtStr + "</span></br> ");
+        }
+        if (this.isPoll) {
+            str.push("<em>poll:</em><br>")
+        }
+        str.push("<br>")
+        str.push("<strong>" + htmlSafe(this.statusText) + "</strong><br>")
+        str.push("<br>")
+        str.push("<em>visibility: </em>" + this.visibility + "<br>")
+        // disable character counts str.push("<span class='info'>" + this.statusText.length + "/" + DraftodonSettings.characterLimit + " characters</span></br> ");
+        return str.join("\n")
+    }
+}
+
 class MastodonStatusUpdateResult {
     constructor({
         id,
@@ -152,10 +258,10 @@ class MastodonScheduledStatus {
         let time = timeSplits[0] + ":" + timeSplits[1]
         let scheduledAtStr = date + " at " + time + " (UTC)"
         str.push("<span class='info'>" + "<em>scheduled at: </em>" + scheduledAtStr + "</span></br> ");
+        str.push("<br>")
         if (this.isPoll) {
             str.push("<em>poll:</em><br>")
         }
-        str.push("<br>")
         str.push("<strong>" + htmlSafe(this.statusText) + "</strong><br>")
         str.push("<br>")
         str.push("<em>visibility: </em>" + this.visibility + "<br>")
@@ -208,11 +314,16 @@ function Draftodon_publishDraftAsSinglePost() {
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
             addConfiguredTagsToDraft();
+            app.displaySuccessMessage("published draft")
+        } else {
+            context.fail()
+            app.displayErrorMessage("publishing draft failed, check Action Log for details")
         }
         return result
     } else {
         // post is not in limits, show character limit and abort publish
         Draftodon_showCharacterLimit()
+        context.fail()
         return undefined
     }
 }
@@ -226,6 +337,7 @@ function Draftodon_scheduleDraftAsSinglePost() {
             // empty draft
             app.displayWarningMessage("Draft is empty")
             context.fail("Draft is empty")
+            context.fail()
             return undefined
         }
         // valid post, ask for schedule time
@@ -238,24 +350,23 @@ function Draftodon_scheduleDraftAsSinglePost() {
             })
             let result = mastodon_postStatusUpdate(statusUpdate)
             if (result) {
-                let dateTimeSplits = result.getScheduledAt().split("T")
-                let date = dateTimeSplits[0]
-                let timeSplits = dateTimeSplits[1].split(":")
-                let time = timeSplits[0] + ":" + timeSplits[1]
-                let scheduledAtStr = date + " at " + time + " (UTC)"
+                let scheduledAtStr = getScheduledAtAsReadableString(result.scheduledAt)
                 app.displaySuccessMessage("scheduled post for " + scheduledAtStr)
                 addConfiguredTagsToDraft();
             } else {
                 app.displayErrorMessage("scheduling post failed, check action log for details")
+                context.fail()
             }
             return result
         } else {
             // no date was selected and info was displayed, abort
+            context.cancel()
             return undefined
         }
     } else {
         // post is not in limits, show character limit and abort publish
         Draftodon_showCharacterLimit()
+        context.fail()
         return undefined
     }
 }
@@ -276,7 +387,9 @@ function Draftodon_publishThreadFromDraft() {
     })
 }
 
+// attention this does currently not work with the API (at least to my knowledge) - the id of the scheduled post can't be used for the "reply to id"
 function Draftodon_scheduleThreadFromDraft() {
+    context.fail()
     Draftodon_readSettingsIntoVars()
     draft.content = removeCharacterLimitIndicatorFromText(draft.content)
     draft.update()
@@ -292,6 +405,163 @@ function Draftodon_scheduleThreadFromDraft() {
         "text": text,
         "scheduleTime": scheduleDate
     })
+}
+
+function Draftodon_publishDraftAsPoll() {
+    Draftodon_readSettingsIntoVars()
+    draft.content = removeCharacterLimitIndicatorFromText(draft.content)
+    draft.update()
+    let text = draft.content
+    // check if more than one line exists
+    let lines = text.split("\n")
+    if (isPostEmpty(text)) {
+        // empty draft
+        app.displayWarningMessage("Draft is empty")
+        context.fail("Draft is empty")
+        return undefined
+    }
+
+    if (lines.length == 1) {
+        app.displayWarningMessage("Draft has only a single line")
+        context.fail("Draft has only a single line")
+        return undefined
+    }
+
+    let pollQuestion = lines.shift().trim() // first line in poll content
+    // loop over remaining lines to create poll options
+    let pollOptions = []
+    for (let ln of lines) {
+        if (ln.length > 0) {
+            pollOptions.push(ln.trim())
+        }
+    }
+    // settings for poll
+    // - expires in
+    // - allow multiple options
+    // - hide totals
+    const expiresInOptionValues = {
+        "1 hour": 3600,
+        "6 hours": 21600,
+        "24 hours": 86400
+    }
+    const expiresInOptions = ["1 hour", "6 hours", "24 hours"]
+    const defaultExpiresIn = "24 hours"
+    let pPollSettings = new Prompt()
+    pPollSettings.title = "select settings for poll"
+    pPollSettings.message = "\"" + pollQuestion + "\"\n" + pollOptions.map((option) => {
+        return "- " + option
+    }).join("\n")
+    pPollSettings.addSegmentedControl("expiresIn", "expires in", expiresInOptions, defaultExpiresIn)
+    pPollSettings.addSwitch("allowMultiple", "allow multiple", false)
+    pPollSettings.addSwitch("hideTotals", "hide total answers", false)
+    pPollSettings.addButton("publish poll", undefined, true, false)
+    if (pPollSettings.show()) {
+        // it was not cancelled
+        // retrieve settings
+        let allowMultiole = pPollSettings.fieldValues["allowMultiple"]
+        let hideTotals = pPollSettings.fieldValues["hideTotals"]
+        let expiresIn = expiresInOptionValues[pPollSettings.fieldValues["expiresIn"]]
+        let statusUpdate = new MastodonPollStatusUpdate({
+            statusText: pollQuestion,
+            pollOptions: pollOptions,
+            allowMultiole: allowMultiole,
+            hideTotals: hideTotals,
+            expiresIn: expiresIn
+        })
+        let result = mastodon_postStatusUpdate(statusUpdate)
+        if (result) {
+            addConfiguredTagsToDraft();
+            app.displaySuccessMessage("published poll")
+        } else {
+            context.fail()
+            app.displayErrorMessage("failed publishing poll, check action log for details")
+        }
+        return result
+    } else {
+        // user cancelled
+        app.displayInfoMessage("Cancelled publishing poll")
+        return undefined
+    }
+}
+
+function Draftodon_scheduleDraftAsPoll() {
+    Draftodon_readSettingsIntoVars()
+    let scheduledDate = getDateForScheduledPostFromPrompt()
+    draft.content = removeCharacterLimitIndicatorFromText(draft.content)
+    draft.update()
+    let text = draft.content
+    // check if more than one line exists
+    let lines = text.split("\n")
+    if (isPostEmpty(text)) {
+        // empty draft
+        app.displayWarningMessage("Draft is empty")
+        context.fail("Draft is empty")
+        return undefined
+    }
+
+    if (lines.length == 1) {
+        app.displayWarningMessage("Draft has only a single line")
+        context.fail("Draft has only a single line")
+        return undefined
+    }
+
+    let pollQuestion = lines.shift().trim() // first line in poll content
+    // loop over remaining lines to create poll options
+    let pollOptions = []
+    for (let ln of lines) {
+        if (ln.length > 0) {
+            pollOptions.push(ln.trim())
+        }
+    }
+    // settings for poll
+    // - expires in
+    // - allow multiple options
+    // - hide totals
+    const expiresInOptionValues = {
+        "1 hour": 3600,
+        "6 hours": 21600,
+        "24 hours": 86400
+    }
+    const expiresInOptions = ["1 hour", "6 hours", "24 hours"]
+    const defaultExpiresIn = "24 hours"
+    let pPollSettings = new Prompt()
+    pPollSettings.title = "select settings for poll"
+    pPollSettings.message = "\"" + pollQuestion + "\"\n" + pollOptions.map((option) => {
+        return "- " + option
+    }).join("\n")
+    pPollSettings.addSegmentedControl("expiresIn", "expires in", expiresInOptions, defaultExpiresIn)
+    pPollSettings.addSwitch("allowMultiple", "allow multiple", false)
+    pPollSettings.addSwitch("hideTotals", "hide total answers", false)
+    pPollSettings.addButton("publish poll", undefined, true, false)
+    if (pPollSettings.show()) {
+        // it was not cancelled
+        // retrieve settings
+        let allowMultiole = pPollSettings.fieldValues["allowMultiple"]
+        let hideTotals = pPollSettings.fieldValues["hideTotals"]
+        let expiresIn = expiresInOptionValues[pPollSettings.fieldValues["expiresIn"]]
+        let statusUpdate = new MastodonPollStatusUpdate({
+            statusText: pollQuestion,
+            pollOptions: pollOptions,
+            allowMultiole: allowMultiole,
+            hideTotals: hideTotals,
+            expiresIn: expiresIn,
+            scheduledAt: scheduledDate.toISOString()
+        })
+        let result = mastodon_postStatusUpdate(statusUpdate)
+        if (result) {
+            addConfiguredTagsToDraft();
+            let scheduledAtStr = getScheduledAtAsReadableString(result.scheduledAt)
+            app.displaySuccessMessage("scheduled poll for " + scheduledAtStr)
+        } else {
+            context.fail()
+            app.displayErrorMessage("failed scheduling poll, check action log for details")
+        }
+        return result
+    } else {
+        // user cancelled
+        app.displayInfoMessage("Cancelled publishing poll")
+        return undefined
+    }
 }
 
 // show scheduled posts
@@ -315,8 +585,15 @@ function Draftodon_editScheduledPosts() {
     let scheduledStatuses = mastodon_getScheduledStatuses()
     // sort them by scheduled date, earliest first
     scheduledStatuses.sort((a, b) => (a.scheduledAt > b.scheduledAt))
+
+    if(scheduledStatuses.length == 0){
+        // no scheduled posts
+        app.displayInfoMessage("no scheduled posts")
+        context.cancal()
+        return undefined
+    }
     let pSelectStatus = new Prompt()
-    pSelectStatus.title = "select scheduled status to update"
+    pSelectStatus.title = "select status to update"
     for (scheduledStatus of scheduledStatuses) {
         let buttonStr = ""
         if (scheduledStatus.isPoll) {
@@ -344,18 +621,20 @@ function Draftodon_editScheduledPosts() {
             switch (selectedOption) {
                 case "reschedule":
                     let rescheduleResult = mastodon_rescheduleScheduledPost(selectedStatus.id)
-                    if(rescheduleResult){
-
+                    if (rescheduleResult) {
+                        app.displaySuccessMessage("Rescheduled status \"" + selectedStatus.text + "\"")
                     } else {
-
+                        context.fail()
+                        app.displayErrorMessage("Rescheduled status \"" + selectedStatus.text + "\" failed")
                     }
                     break;
                 case "delete":
                     let deleteResult = mastodon_deleteScheduledPost(selectedStatus.id);
-                    if(deleteResult){
-                        app.displaySuccessMessage("Deleted scheduled status \"" + buttonStr + "\"")
+                    if (deleteResult) {
+                        app.displaySuccessMessage("Deleted scheduled status \"" + selectedStatus.text + "\"")
                     } else {
-                        app.displayErrorMessage("Delete scheduled status \"" + buttonStr + "\" failed")
+                        context.fail()
+                        app.displayErrorMessage("Delete scheduled status \"" + selectedStatus.text + "\" failed")
                     }
                     break;
             }
@@ -500,6 +779,7 @@ function mastodon_publishThread({
 
             } else {
                 app.displayErrorMessage("publishing thread failed, check action log for details")
+                context.fail()
                 return false;
             }
 
@@ -527,10 +807,10 @@ function mastodon_deleteScheduledPost(id) {
         console.log("Delete Failed: " + response.statusCode + ", " + response.error)
         alert("Delete Failed: " + response.statusCode + ", " + response.error)
         context.fail()
-        return true
+        return false
     } else {
         console.log("Deleted scheduled Post with id: " + id)
-        return false
+        return true
     }
 }
 
@@ -541,17 +821,20 @@ function mastodon_rescheduleScheduledPost(id) {
     let postRequest = {
         "path": MastodonEndpoints.SCHEDULED_STATUSES + "/" + id,
         "method": "PUT",
-        "data": {"scheduled_at": date.toISOString()}
+        "data": {
+            "scheduled_at": date.toISOString()
+        }
     }
     let response = mastodon.request(postRequest)
     if (!response.success) {
         console.log("Reschedule Failed: " + response.statusCode + ", " + response.error)
-        alert("Reschedule Failed: " + response.statusCode + ", " + response.error)
+        app.displayErrorMessage("rescheduling failed, check Action Log for details")
         context.fail()
-        return true
+        return false
     } else {
         console.log("Rescheduled post with id: " + id)
-        return false
+        app.displaySuccessMessage("rescheduled post")
+        return true
     }
 
 }
@@ -591,7 +874,7 @@ function parseGetScheduledStatusesResponse(data) {
         obj["visibility"] = params["visibility"]
         obj["scheduledAt"] = post["scheduled_at"]
         obj["id"] = post["id"]
-        //alert(JSON.stringify(obj) + "\n\n" + obj.id)
+        //alert(JSON.stringify(obj))
         result.push(new MastodonScheduledStatus(obj))
         count++
     }
@@ -823,4 +1106,12 @@ function addConfiguredTagsToDraft() {
         }
         draft.update()
     }
+}
+
+function getScheduledAtAsReadableString(scheduledDate) {
+    let dateTimeSplits = scheduledDate.split("T")
+    let date = dateTimeSplits[0]
+    let timeSplits = dateTimeSplits[1].split(":")
+    let time = timeSplits[0] + ":" + timeSplits[1]
+    return date + " at " + time + " (UTC)"
 }
