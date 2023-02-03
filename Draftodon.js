@@ -5,7 +5,7 @@
 //
 // feedback and requests welcome ✌️
 //
-// do you like this Shorcut?
+// do you like this ActionGroup?
 // 🚀 consider supporting my work: 
 // - https://www.buymeacoffee.com/flohgro
 // - https://flohgro.com/donate/
@@ -21,7 +21,8 @@ let DraftodonSettings = {
     "mastodonHandle": "",
     "characterLimit": 0,
     "characterLimitIndicator": "",
-    "threadDivider": ""
+    "threadDivider": "",
+    "tagsToAddOnSuccess": []
 }
 // class defines
 class MastodonTextStatusUpdate {
@@ -131,12 +132,14 @@ class MastodonScheduledStatus {
         statusText,
         isPoll = false,
         visibility = "public",
-        scheduledAt
+        scheduledAt,
+        id
     }) {
         this.statusText = statusText
         this.isPoll = isPoll
         this.visibility = visibility
         this.scheduledAt = scheduledAt
+        this.id = id
     }
     toString() {
         return (this.isPoll ? "Poll: " : "") + "\"" + this.statusText + "\"\nscheduled at: " + this.scheduledAt + "\n" + (this.visibility != "public" ? "visibility: " + this.visibility : "")
@@ -202,7 +205,11 @@ function Draftodon_publishDraftAsSinglePost() {
         let statusUpdate = new MastodonTextStatusUpdate({
             statusText: text
         })
-        return mastodon_postStatusUpdate(statusUpdate)
+        let result = mastodon_postStatusUpdate(statusUpdate)
+        if (result) {
+            addConfiguredTagsToDraft();
+        }
+        return result
     } else {
         // post is not in limits, show character limit and abort publish
         Draftodon_showCharacterLimit()
@@ -222,7 +229,7 @@ function Draftodon_scheduleDraftAsSinglePost() {
             return undefined
         }
         // valid post, ask for schedule time
-        let scheduleDate = getDateForScheduledFromPrompt()
+        let scheduleDate = getDateForScheduledPostFromPrompt()
         if (scheduleDate) {
             // user selected schedule date
             let statusUpdate = new MastodonTextStatusUpdate({
@@ -230,7 +237,17 @@ function Draftodon_scheduleDraftAsSinglePost() {
                 scheduledAt: scheduleDate.toISOString()
             })
             let result = mastodon_postStatusUpdate(statusUpdate)
-            app.displaySuccessMessage("scheduled post for " + result.getScheduledAt().split("T")[0] + " " + result.getScheduledAt().split("T")[1])
+            if (result) {
+                let dateTimeSplits = result.getScheduledAt().split("T")
+                let date = dateTimeSplits[0]
+                let timeSplits = dateTimeSplits[1].split(":")
+                let time = timeSplits[0] + ":" + timeSplits[1]
+                let scheduledAtStr = date + " at " + time + " (UTC)"
+                app.displaySuccessMessage("scheduled post for " + scheduledAtStr)
+                addConfiguredTagsToDraft();
+            } else {
+                app.displayErrorMessage("scheduling post failed, check action log for details")
+            }
             return result
         } else {
             // no date was selected and info was displayed, abort
@@ -247,91 +264,42 @@ function Draftodon_publishThreadFromDraft() {
     Draftodon_readSettingsIntoVars()
     draft.content = removeCharacterLimitIndicatorFromText(draft.content)
     draft.update()
-    alert(draft.content)
     let text = draft.content
-    // divide into single posts
-    let posts = dividePostsinThread(text)
-    // add thread numbering to each post
-    let postCtr = 1
-    let tmpPosts = []
-    let statusUpdates = []
-    for (post of posts) {
-        let postText = post + " " + createPostCountString(postCtr, posts.length)
-        let statusUpdate = new MastodonTextStatusUpdate({
-            statusText: postText,
-            //inReplyToId: (postCtr > 1 ? inReplyToId : null),
-            visibility: (postCtr > 1 ? "unlisted" : "public")
-        })
-        statusUpdates.push(statusUpdate)
-        tmpPosts.push(postText)
-        postCtr++
+    if (isPostEmpty(text)) {
+        // empty draft
+        app.displayWarningMessage("Draft is empty")
+        context.fail("Draft is empty")
+        return undefined
     }
-    posts = tmpPosts
-    // check if all posts are valid
-    let isValidThread = areAllPostsinLimits(posts)
-    // html preview will also check if the posts are valid to present the thread
-    let html = createHtml({
-        type: "multiple_posts",
-        posts: statusUpdates,
-        publishIntended: true
+    return mastodon_publishThread({
+        "text": text
     })
-    // if user selects continue in preview, the function returns true
-    let continueSelected = previewHtml(html)
-    // only if post is valid and continue was selected, we can publish the thread
-    if (isValidThread) {
-        // post is valid, check if continue was selected
-        if (continueSelected) {
-            // publish thread
-            let count = 1
-            let inReplyToId = ""
-            let success = true
-            let retries = 0
-            const maxRetries = 5;
-            for (post of posts) {
-                let result = undefined;
-                let retryCount = 0
-                // loop for retries to avoid failures due to slow response of server
-                while (!result) {
-                    let statusUpdate = new MastodonTextStatusUpdate({
-                        statusText: post,
-                        inReplyToId: (count > 1 ? inReplyToId : null),
-                        visibility: (count > 1 ? "unlisted" : "public")
-                    })
-                    result = mastodon_postStatusUpdate(statusUpdate)
-                    retryCount++
-                    if (retryCount >= maxRetries) {
-                        success = false;
-                        break;
-                    }
-                    sleep(400)
-                    retries++
-                }
-                inReplyToId = result.getId()
-                count++
-            }
-            if(success){
-                app.displaySuccessMessage("published thread" + " retries: " + retries)
-                
-            } else {
-                app.displayErrorMessage("publishing thread failed, check action log for details")
-            }
+}
 
-        } else {
-            // abort publish thread, user cancelled
-            app.displayInfoMessage("publish thread cancelled")
-            return undefined
-        }
-    } else {
-        // abort publish thread, user cancelled
-        app.displayWarningMessage("thread is invalid reduce length")
-        return false
+function Draftodon_scheduleThreadFromDraft() {
+    Draftodon_readSettingsIntoVars()
+    draft.content = removeCharacterLimitIndicatorFromText(draft.content)
+    draft.update()
+    let text = draft.content
+    if (isPostEmpty(text)) {
+        // empty draft
+        app.displayWarningMessage("Draft is empty")
+        context.fail("Draft is empty")
+        return undefined
     }
+    let scheduleDate = getDateForScheduledPostFromPrompt()
+    return mastodon_publishThread({
+        "text": text,
+        "scheduleTime": scheduleDate
+    })
 }
 
 // show scheduled posts
 function Draftodon_showScheduledPosts() {
     Draftodon_readSettingsIntoVars()
     let scheduledStatuses = mastodon_getScheduledStatuses()
+    // sort them by scheduled date, earliest first
+    scheduledStatuses.sort((a, b) => (a.scheduledAt > b.scheduledAt))
 
     let html = createHtml({
         "type": "multiple_posts",
@@ -339,6 +307,68 @@ function Draftodon_showScheduledPosts() {
         "publishIntended": false
     })
     previewHtml(html)
+}
+
+// edit scheduled statuses
+function Draftodon_editScheduledPosts() {
+    Draftodon_readSettingsIntoVars()
+    let scheduledStatuses = mastodon_getScheduledStatuses()
+    // sort them by scheduled date, earliest first
+    scheduledStatuses.sort((a, b) => (a.scheduledAt > b.scheduledAt))
+    let pSelectStatus = new Prompt()
+    pSelectStatus.title = "select scheduled status to update"
+    for (scheduledStatus of scheduledStatuses) {
+        let buttonStr = ""
+        if (scheduledStatus.isPoll) {
+            buttonStr = buttonStr + "poll: "
+        }
+        buttonStr = buttonStr + scheduledStatus.statusText
+        const maxLength = 40
+        if (buttonStr.length > maxLength) {
+            buttonStr = buttonStr.substring(0, maxLength) + "..."
+        }
+        pSelectStatus.addButton(buttonStr, {
+            "text": buttonStr,
+            "id": scheduledStatus.id
+        })
+    }
+    if (pSelectStatus.show()) {
+        let selectedStatus = pSelectStatus.buttonPressed
+        let pSelectEdit = new Prompt()
+        pSelectEdit.title = "select option to edit status"
+        pSelectEdit.message = "\"" + selectedStatus.text + "\""
+        pSelectEdit.addButton("reschedule")
+        pSelectEdit.addButton("delete", "delete", false, true)
+        if (pSelectEdit.show()) {
+            let selectedOption = pSelectEdit.buttonPressed
+            switch (selectedOption) {
+                case "reschedule":
+                    let rescheduleResult = mastodon_rescheduleScheduledPost(selectedStatus.id)
+                    if(rescheduleResult){
+
+                    } else {
+
+                    }
+                    break;
+                case "delete":
+                    let deleteResult = mastodon_deleteScheduledPost(selectedStatus.id);
+                    if(deleteResult){
+                        app.displaySuccessMessage("Deleted scheduled status \"" + buttonStr + "\"")
+                    } else {
+                        app.displayErrorMessage("Delete scheduled status \"" + buttonStr + "\" failed")
+                    }
+                    break;
+            }
+            return
+        } else {
+            // cancelled
+            app.displayInfoMessage("no option selected")
+            return
+        }
+    } else {
+        app.displayInfoMessage("no status selected")
+        return
+    }
 }
 
 // helper functions (no drafts actions)
@@ -358,6 +388,7 @@ function mastodon_postStatusUpdate(statusUpdate) {
 
     if (!response.success) {
         console.log("Post Failed: " + response.statusCode + ", " + response.error)
+        alert("Post Failed: " + response.statusCode + ", " + response.error)
         context.fail()
         return undefined
     } else {
@@ -389,6 +420,140 @@ function mastodon_getScheduledStatuses() {
         return parseGetScheduledStatusesResponse(data)
         //	console.log(`Posted to Mastodon: ${response.responseData["url"]}`)
     }
+}
+
+// publish thread using the publishStatusUpdate function
+function mastodon_publishThread({
+    text,
+    scheduleTime = undefined
+}) {
+    // abort if scheduledTime is provided - not supported through the API
+    if (scheduleTime) {
+        app.displayErrorMessage("Scheduling Thread is not possible through the API")
+        return false;
+    }
+    // divide into single posts
+    let posts = dividePostsinThread(text)
+    // add thread numbering to each post
+    let postCtr = 1
+    let tmpPosts = []
+    let statusUpdates = []
+    for (post of posts) {
+        let postText = post + " " + createPostCountString(postCtr, posts.length)
+        let statusUpdate = new MastodonTextStatusUpdate({
+            statusText: postText,
+            //inReplyToId: (postCtr > 1 ? "id" : null),
+            visibility: (postCtr > 1 ? "unlisted" : "public")
+        })
+        statusUpdates.push(statusUpdate)
+        tmpPosts.push(postText)
+        postCtr++
+    }
+    posts = tmpPosts
+    // check if all posts are valid
+    let isValidThread = areAllPostsinLimits(posts)
+    // html preview will also check if the posts are valid to present the thread
+    let html = createHtml({
+        type: "multiple_posts",
+        posts: statusUpdates,
+        publishIntended: true
+    })
+    // if user selects continue in preview, the function returns true
+    let continueSelected = previewHtml(html)
+    // only if post is valid and continue was selected, we can publish the thread
+    if (isValidThread) {
+        // post is valid, check if continue was selected
+        if (continueSelected) {
+            // publish thread
+            let count = 1
+            let inReplyToId = ""
+            let success = true
+            const maxRetries = 5;
+            for (post of posts) {
+                let result = undefined;
+                let retryCount = 0
+                // loop for retries to avoid failures due to slow response of server
+                while (!result) {
+                    // let scheduledTime = new Date(scheduleTime)
+                    // scheduleTime.setMilliseconds(scheduleTime.getMilliseconds() + ((count - 1) * 10));
+                    let statusUpdate = new MastodonTextStatusUpdate({
+                        statusText: post,
+                        inReplyToId: (count > 1 ? inReplyToId : null),
+                        visibility: (count > 1 ? "unlisted" : "public")
+                        //                        scheduledAt: (scheduleTime ? scheduledTime.toISOString() : null)
+                    })
+                    result = mastodon_postStatusUpdate(statusUpdate)
+                    retryCount++
+                    if (retryCount >= maxRetries) {
+                        success = false;
+                        break;
+                    }
+                    sleep(400)
+                }
+                inReplyToId = result.getId()
+                count++
+            }
+            if (success) {
+                app.displaySuccessMessage("published thread")
+                addConfiguredTagsToDraft()
+                return true;
+
+            } else {
+                app.displayErrorMessage("publishing thread failed, check action log for details")
+                return false;
+            }
+
+        } else {
+            // abort publish thread, user cancelled
+            app.displayInfoMessage("publish thread cancelled")
+            return undefined
+        }
+    } else {
+        // abort publish thread, user cancelled
+        app.displayWarningMessage("thread is invalid reduce length")
+        return false
+    }
+}
+
+// cancel / delete scheduled post
+function mastodon_deleteScheduledPost(id) {
+    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
+    let postRequest = {
+        "path": MastodonEndpoints.SCHEDULED_STATUSES + "/" + id,
+        "method": "DELETE",
+    }
+    let response = mastodon.request(postRequest)
+    if (!response.success) {
+        console.log("Delete Failed: " + response.statusCode + ", " + response.error)
+        alert("Delete Failed: " + response.statusCode + ", " + response.error)
+        context.fail()
+        return true
+    } else {
+        console.log("Deleted scheduled Post with id: " + id)
+        return false
+    }
+}
+
+// reschedule scheduled post
+function mastodon_rescheduleScheduledPost(id) {
+    let date = getDateForScheduledPostFromPrompt()
+    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
+    let postRequest = {
+        "path": MastodonEndpoints.SCHEDULED_STATUSES + "/" + id,
+        "method": "PUT",
+        "data": {"scheduled_at": date.toISOString()}
+    }
+    let response = mastodon.request(postRequest)
+    if (!response.success) {
+        console.log("Reschedule Failed: " + response.statusCode + ", " + response.error)
+        alert("Reschedule Failed: " + response.statusCode + ", " + response.error)
+        context.fail()
+        return true
+    } else {
+        console.log("Rescheduled post with id: " + id)
+        return false
+    }
+
 }
 
 // parse results
@@ -425,6 +590,8 @@ function parseGetScheduledStatusesResponse(data) {
         }
         obj["visibility"] = params["visibility"]
         obj["scheduledAt"] = post["scheduled_at"]
+        obj["id"] = post["id"]
+        //alert(JSON.stringify(obj) + "\n\n" + obj.id)
         result.push(new MastodonScheduledStatus(obj))
         count++
     }
@@ -442,7 +609,6 @@ function isPostInLimits(post, offset) {
     } else {
         unlinked = post.replace(urlRegex, "00000000000000000000000");
     }
-    //alert(post + "\n\n" + unlinked.length + "\n\n" + (DraftodonSettings.characterLimit - offset) + "\n\n" + (unlinked.length > 0) + "\n\n" + (unlinked.length <= (DraftodonSettings.characterLimit - offset)))
     return unlinked.length <= (DraftodonSettings.characterLimit - offset) && unlinked.length > 0;
 }
 
@@ -455,7 +621,7 @@ function areAllPostsinLimits(posts) {
         return false;
     }
     for (var post of posts) {
-        if (!isPostInLimits(post,0)) {
+        if (!isPostInLimits(post, 0)) {
             return false;
         }
     }
@@ -468,7 +634,7 @@ function removeCharacterLimitIndicatorFromText(text) {
 }
 
 // get iso date string from selected date in prompt to schedule a post
-function getDateForScheduledFromPrompt() {
+function getDateForScheduledPostFromPrompt() {
     let p = new Prompt()
     p.title = "select date & time"
     let startDate = new Date()
@@ -552,10 +718,10 @@ function createHtml({
                     obj["post"] = post
                     obj["count"] = ctr
                     obj["postAmount"] = posts.length
-                    if(publishIntended){
-                        obj["isValid"] = isPostInLimits(post,0)
+                    if (publishIntended) {
+                        obj["isValid"] = isPostInLimits(post, 0)
                     }
-                    if(ctr > 1){
+                    if (ctr > 1) {
                         obj["useReply"] = false
                     }
                     html.push(getPostAsHtml(obj))
@@ -625,10 +791,13 @@ function Draftodon_readSettingsIntoVars() {
     DraftodonSettings.characterLimit = parseInt(draft.processTemplate("[[character_limit]]"))
     DraftodonSettings.characterLimitIndicator = draft.processTemplate("[[character_limit_indicator]]")
     DraftodonSettings.threadDivider = draft.processTemplate("[[thread_divider]]")
+    let tagsToAddOnSuccess = []
+    let tagsList = draft.processTemplate("[[tags-to-add-on-successfull-publish]]").split(",")
+    for (tag of tagsList) {
+        tagsToAddOnSuccess.push(tag.trim())
+    }
+    DraftodonSettings.tagsToAddOnSuccess = tagsToAddOnSuccess
 }
-
-
-// to be cleaned
 
 // Utility functions
 function dividePostsinThread(input) {
@@ -639,8 +808,19 @@ function dividePostsinThread(input) {
     return paragraphs;
 }
 
+// sleep function
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
+// creates the string which is appended on each thread post to indicate the position in the thread
 function createPostCountString(curPosition, length) {
     return "[" + curPosition + "/" + length + "]"
+}
+
+function addConfiguredTagsToDraft() {
+    if (DraftodonSettings.tagsToAddOnSuccess.length > 0) {
+        for (tag of DraftodonSettings.tagsToAddOnSuccess) {
+            draft.addTag(tag)
+        }
+        draft.update()
+    }
 }
