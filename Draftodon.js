@@ -589,7 +589,7 @@ function Draftodon_editScheduledPosts() {
     if(scheduledStatuses.length == 0){
         // no scheduled posts
         app.displayInfoMessage("no scheduled posts")
-        context.cancal()
+        context.cancel()
         return undefined
     }
     let pSelectStatus = new Prompt()
