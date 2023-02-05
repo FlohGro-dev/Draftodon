@@ -317,7 +317,9 @@ function Draftodon_showCharacterLimit() {
 
 // post draft as single post
 function Draftodon_publishDraftAsSinglePost() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     let text = removeCharacterLimitIndicatorFromText(draft.content)
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
@@ -355,7 +357,9 @@ function Draftodon_publishDraftAsSinglePost() {
 
 // schedule draft as single post
 function Draftodon_scheduleDraftAsSinglePost() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     let text = removeCharacterLimitIndicatorFromText(draft.content)
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
@@ -401,7 +405,9 @@ function Draftodon_scheduleDraftAsSinglePost() {
 }
 
 function Draftodon_publishThreadFromDraft() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     draft.content = removeCharacterLimitIndicatorFromText(draft.content)
     draft.update()
     let text = draft.content
@@ -419,7 +425,9 @@ function Draftodon_publishThreadFromDraft() {
 // attention this does currently not work with the API (at least to my knowledge) - the id of the scheduled post can't be used for the "reply to id"
 function Draftodon_scheduleThreadFromDraft() {
     context.fail()
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     draft.content = removeCharacterLimitIndicatorFromText(draft.content)
     draft.update()
     let text = draft.content
@@ -437,7 +445,9 @@ function Draftodon_scheduleThreadFromDraft() {
 }
 
 function Draftodon_publishDraftAsPoll() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     draft.content = removeCharacterLimitIndicatorFromText(draft.content)
     draft.update()
     let text = draft.content
@@ -518,7 +528,9 @@ function Draftodon_publishDraftAsPoll() {
 }
 
 function Draftodon_scheduleDraftAsPoll() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     draft.content = removeCharacterLimitIndicatorFromText(draft.content)
     draft.update()
     let text = draft.content
@@ -609,7 +621,9 @@ function Draftodon_scheduleDraftAsPoll() {
 
 // post draft with content warning
 function Draftodon_publishDraftWithContentWarning() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     let text = removeCharacterLimitIndicatorFromText(draft.content)
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
@@ -679,7 +693,9 @@ function Draftodon_publishDraftWithContentWarning() {
 
 // schedule draft with content warning
 function Draftodon_scheduleDraftWithContentWarning() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     let text = removeCharacterLimitIndicatorFromText(draft.content)
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
@@ -756,7 +772,9 @@ function Draftodon_scheduleDraftWithContentWarning() {
 
 // show scheduled posts
 function Draftodon_showScheduledPosts() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     let scheduledStatuses = mastodon_getScheduledStatuses()
     // sort them by scheduled date, earliest first
     scheduledStatuses.sort((a, b) => (a.scheduledAt > b.scheduledAt))
@@ -771,7 +789,9 @@ function Draftodon_showScheduledPosts() {
 
 // edit scheduled statuses
 function Draftodon_editScheduledPosts() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     let scheduledStatuses = mastodon_getScheduledStatuses()
     // sort them by scheduled date, earliest first
     scheduledStatuses.sort((a, b) => (a.scheduledAt > b.scheduledAt))
@@ -1269,7 +1289,20 @@ function getPostAsHtml({
 // read Mastodon Settings into variables
 function Draftodon_readSettingsIntoVars() {
     DraftodonSettings.mastodonInstance = draft.processTemplate("[[mastodon_instance]]")
+    // check if instance was set, otherwise return false
+    if(DraftodonSettings.mastodonInstance == "UNDEFINED"){
+        alert("ERROR:\nyou didn't configure your Mastodon instance in the Draftodon Settings Action.\nThis is necessary to authenticate Drafts and use Draftodon")
+        app.displayErrorMessage("Mastodon Instance not configured")
+        context.fail()
+        return false
+    }
     DraftodonSettings.mastodonHandle = draft.processTemplate("[[mastodon_handle]]")
+    if(DraftodonSettings.mastodonHandle == "UNDEFINED"){
+        alert("ERROR:\nyou didn't configure your Mastodon Handle in the Draftodon Settings Action.\nThis is necessary to authenticate Drafts and use Draftodon")
+        app.displayErrorMessage("Mastodon Handle not configured")
+        context.fail()
+        return false
+    }
     DraftodonSettings.characterLimit = parseInt(draft.processTemplate("[[character_limit]]"))
     DraftodonSettings.characterLimitIndicator = draft.processTemplate("[[character_limit_indicator]]")
     DraftodonSettings.threadDivider = draft.processTemplate("[[thread_divider]]")
@@ -1279,6 +1312,7 @@ function Draftodon_readSettingsIntoVars() {
         tagsToAddOnSuccess.push(tag.trim())
     }
     DraftodonSettings.tagsToAddOnSuccess = tagsToAddOnSuccess
+    return true;
 }
 
 // Utility functions
@@ -1299,6 +1333,9 @@ function createPostCountString(curPosition, length) {
 }
 
 function addConfiguredTagsToDraft() {
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     if (DraftodonSettings.tagsToAddOnSuccess.length > 0) {
         for (tag of DraftodonSettings.tagsToAddOnSuccess) {
             draft.addTag(tag)
@@ -1317,7 +1354,9 @@ function getScheduledAtAsReadableString(scheduledDate) {
 
 
 function Draftodon_followFlohGro() {
-    Draftodon_readSettingsIntoVars()
+    if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
     const userIdFlohGro = "108132565867141294"
     ///api/v1/accounts/mastodon.social/108132565867141294/follow
     let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
