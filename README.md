@@ -11,7 +11,7 @@ Draftodon - a [Drafts](https://getdrafts.com) Action Group to integrate with [Ma
 This repository contains the underlying functions and the documentation for the Draftodon Action Group.
 You can install the Draftodon Action Group from the Drafts directory: [Draftodon]()
 
-If you encounter any issues please open an issue in the repository or reach out to me in the [Drafts Forums Post about Draftodon]() or of course on [Mastodon](https://mastodon.social/@FlohGro) ✌🏽
+If you encounter any issues please open an issue in the repository or reach out to me in the [@FlohGro](https://forums.getdrafts.com/u/flohgro/summary) or of course on [Mastodon](https://mastodon.social/@FlohGro) ✌🏽
 
 ## Draftodon Instructions
 
@@ -28,6 +28,8 @@ You can choose the amount you want to donate on the platforms linked on [my webs
 <a href="https://www.buymeacoffee.com/flohgro" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 220px !important;" ></a>
 
 <a href="https://www.patreon.com/flohgro" target="_blank"><img src="https://user-images.githubusercontent.com/13785667/162812708-55b96cdc-8c32-4433-a340-6dd4c1f7326d.jpg" alt="Become A patreon" style="height: 110px !important;width: 220px !important;" ></a>
+
+<a href='https://ko-fi.com/flohgro' target='_blank'><img height='35' style='border:0px;height:46px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
 
 ## Changelog
 
