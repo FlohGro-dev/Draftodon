@@ -15,7 +15,7 @@ If you encounter any issues please open an issue in the repository or reach out 
 
 ## Draftodon Instructions
 
-To read through the instructions of Draftodon look into the dedicated file in this repository: [Draftodon Instructions]()
+To read through the instructions of Draftodon look into the dedicated file in this repository: [Draftodon Instructions](https://github.com/FlohGro-dev/Draftodon/blob/main/Draftodon%20Instructions.md)
 
 ## Support Development
 
@@ -23,7 +23,7 @@ I developed these functions and the Action Group in my free time to help myself 
 
 Draftodon is completely free to use for you. However if this Action Group is useful for you and supports your workflows you can give something back to support development.
 I enjoy a good coffee ☕️ (weather at home or in an actual coffee shop) and love pizza 🍕.
-You can choose the amount you want to donate on those platforms.
+You can choose the amount you want to donate on the platforms linked on [my website](https://flohgro.com/donate/)..
 
 <a href="https://www.buymeacoffee.com/flohgro" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 220px !important;" ></a>
 
@@ -31,6 +31,6 @@ You can choose the amount you want to donate on those platforms.
 
 ## Changelog
 
-### Draftist 1.0 - initial Release
+### Draftodon 1.0 - initial Release
 
-*this is the initial version of Draftist*
+*this is the initial version of Draftodon*
