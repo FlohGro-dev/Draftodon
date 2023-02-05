@@ -43,6 +43,12 @@ Draftodon is completely free to use for you. However if this Action Group is use
 I enjoy a good coffee ☕️ (weather at home or in an actual coffee shop) and love pizza 🍕.
 You can choose the amount you want to donate on the platforms linked on [my website](https://flohgro.com/donate/).
 
+<a href="https://www.buymeacoffee.com/flohgro" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 220px !important;" ></a>
+
+<a href="https://www.patreon.com/flohgro" target="_blank"><img src="https://user-images.githubusercontent.com/13785667/162812708-55b96cdc-8c32-4433-a340-6dd4c1f7326d.jpg" alt="Become A patreon" style="height: 110px !important;width: 220px !important;" ></a>
+
+<a href='https://ko-fi.com/flohgro' target='_blank'><img height='35' style='border:0px;height:55px;width:220px' src='https://az743702.vo.msecnd.net/cdn/kofi1.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
+
 ## Feature Requests and Issue Reporting
 
 If you encounter any issues or have additional feature requests you can reach out to me in different ways:
