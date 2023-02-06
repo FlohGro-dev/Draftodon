@@ -438,6 +438,9 @@ function Draftodon_scheduleThreadFromDraft() {
         return undefined
     }
     let scheduleDate = getDateForScheduledPostFromPrompt()
+    if(!scheduleDate){
+        return undefined
+    }
     return mastodon_publishThread({
         "text": text,
         "scheduleTime": scheduleDate
@@ -550,7 +553,6 @@ function Draftodon_scheduleDraftAsPoll() {
     if(!scheduledDate){
         // no date selected
         context.cancel()
-        app.displayInfoMessage("no schedule time selected")
         return undefined
     }
 
@@ -708,7 +710,6 @@ function Draftodon_scheduleDraftWithContentWarning() {
         if(!scheduledDate){
             // no date selected
             context.cancel()
-            app.displayInfoMessage("no schedule time selected")
             return undefined
         }
         // first line is spoiler text, rest of draft is status text; at least two lines are necessary
@@ -1027,6 +1028,9 @@ function mastodon_deleteScheduledPost(id) {
 // reschedule scheduled post
 function mastodon_rescheduleScheduledPost(id) {
     let date = getDateForScheduledPostFromPrompt()
+    if(!date){
+        return false
+    }
     let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
     let postRequest = {
         "path": MastodonEndpoints.SCHEDULED_STATUSES + "/" + id,
