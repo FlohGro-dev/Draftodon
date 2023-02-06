@@ -11,7 +11,7 @@ Draftodon - a [Drafts](https://getdrafts.com) Action Group to integrate with [Ma
 This repository contains the underlying functions and the documentation for the Draftodon Action Group.
 You can install the Draftodon Action Group from the Drafts directory: [Draftodon](https://directory.getdrafts.com/g/2GL)
 
-If you encounter any issues please open an issue in the repository or reach out to me in the [Drafts forum](https://forums.getdrafts.com/u/flohgro/summary) or of course on [Mastodon](https://mastodon.social/@FlohGro) ✌🏽
+If you encounter any issues please open an issue in the repository or reach out to me in the [Drafts forum](https://forums.getdrafts.com/t/draftodon-a-drafts-action-group-for-mastodon/13962) or of course on [Mastodon](https://mastodon.social/@FlohGro) ✌🏽
 
 ## Draftodon Instructions
 

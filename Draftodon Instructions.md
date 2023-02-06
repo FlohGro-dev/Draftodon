@@ -54,7 +54,7 @@ You can choose the amount you want to donate on the platforms linked on [my webs
 If you encounter any issues or have additional feature requests you can reach out to me in different ways:
 
 - report / request issues in the GitHub repository [here](https://github.com/FlohGro-dev/Draftodon/issues)
-- take part in the conversation in the Drafts forums [here]()
+- take part in the conversation in the Drafts forums [here](https://forums.getdrafts.com/t/draftodon-a-drafts-action-group-for-mastodon/13962)
 - reach out on Mastodon by mentioning [@FlohGro](https://mastodon.social/@FlohGro)
 - contact me on other platforms of your choice [here](https://flohgro.com/contactme)
 

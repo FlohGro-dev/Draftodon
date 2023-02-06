@@ -8,7 +8,7 @@ Draftodon - an Action Group to integrate Drafts with [Mastodon](https://joinmast
 - **Drafts Forums:** [@FlohGro](https://forums.getdrafts.com/u/flohgro/summary)
 - **Mastodon:** [@FlohGro](https://mastodon.social/@FlohGro)
 
-If you encounter any issues please open an issue in the [repository](https://github.com/FlohGro-dev/Draftodon) or reach out to me in the [Drafts forum](https://forums.getdrafts.com/u/flohgro/summary) or of course on [Mastodon](https://mastodon.social/@FlohGro) ✌🏽
+If you encounter any issues please open an issue in the [repository](https://github.com/FlohGro-dev/Draftodon) or reach out to me in the [Drafts forum](https://forums.getdrafts.com/t/draftodon-a-drafts-action-group-for-mastodon/13962) or of course on [Mastodon](https://mastodon.social/@FlohGro) ✌🏽
 
 ## Draftodon Instructions
 
