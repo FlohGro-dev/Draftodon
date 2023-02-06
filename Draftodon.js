@@ -1008,11 +1008,13 @@ function mastodon_publishThread({
         } else {
             // abort publish thread, user cancelled
             app.displayInfoMessage("publish thread cancelled")
+            context.cancel()
             return undefined
         }
     } else {
         // abort publish thread, user cancelled
         app.displayWarningMessage("thread is invalid reduce length")
+        context.cancel()
         return false
     }
 }
