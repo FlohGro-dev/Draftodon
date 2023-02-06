@@ -783,6 +783,13 @@ function Draftodon_showScheduledPosts() {
     let scheduledStatuses = mastodon_getScheduledStatuses()
     // sort them by scheduled date, earliest first
     scheduledStatuses.sort((a, b) => (a.scheduledAt > b.scheduledAt))
+    
+    if (scheduledStatuses.length == 0) {
+        // no scheduled posts
+        app.displayInfoMessage("no scheduled posts")
+        context.cancel()
+        return undefined
+    }
 
     let html = createHtml({
         "type": "multiple_posts",
