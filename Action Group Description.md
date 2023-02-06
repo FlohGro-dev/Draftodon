@@ -1,6 +1,6 @@
 # Draftodon
 
-Draftodon - a [Drafts](https://getdrafts.com) Action Group to integrate with [Mastodon](https://joinmastodon.org).
+Draftodon - an Action Group to integrate Drafts with [Mastodon](https://joinmastodon.org).
 
 **created by [@FlohGro](https://mastodon.social/@FlohGro)**
 
@@ -8,14 +8,17 @@ Draftodon - a [Drafts](https://getdrafts.com) Action Group to integrate with [Ma
 - **Drafts Forums:** [@FlohGro](https://forums.getdrafts.com/u/flohgro/summary)
 - **Mastodon:** [@FlohGro](https://mastodon.social/@FlohGro)
 
-This repository contains the underlying functions and the documentation for the Draftodon Action Group.
-You can install the Draftodon Action Group from the Drafts directory: [Draftodon](https://directory.getdrafts.com/g/2GL)
-
-If you encounter any issues please open an issue in the repository or reach out to me in the [Drafts forum](https://forums.getdrafts.com/u/flohgro/summary) or of course on [Mastodon](https://mastodon.social/@FlohGro) ✌🏽
+If you encounter any issues please open an issue in the [repository](https://github.com/FlohGro-dev/Draftodon) or reach out to me in the [Drafts forum](https://forums.getdrafts.com/u/flohgro/summary) or of course on [Mastodon](https://mastodon.social/@FlohGro) ✌🏽
 
 ## Draftodon Instructions
 
 To read through the instructions of Draftodon look into the dedicated file in this repository: [Draftodon Instructions](https://github.com/FlohGro-dev/Draftodon/blob/main/Draftodon%20Instructions.md)
+
+### TL;DR
+
+- Run `Draftodon Setup/Update` to download the `Draftodon.js` file into the iCloud Folder of Drafts
+- Configure your `mastodon_instance` and `mastodon_handle` in the `Draftodon Settings`Action
+- Start using *Draftodon* - "*warning*" Draftodon posts directly to the configured account once you authenticated it
 
 ## Support Development
 

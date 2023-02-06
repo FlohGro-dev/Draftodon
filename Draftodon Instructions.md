@@ -9,7 +9,7 @@
 > Welcome to Draftodon - an Action Group for Draft to integrate with Mastodon.
 > **IMPORTANT: Before running any other Action, you have to run the "Draftodon Setup/Update" Action which downloads the latest version of Draftodon from this repository.**
 
-Draftodon contains several Actions to integrate Drafts with Mastodon.
+Draftodon contains several Actions to integrate Drafts with Mastodon. You can download the Action Group from the [Drafts directory](https://directory.getdrafts.com/g/2GL)
 
 The Actions are divided into the following sections:
 
