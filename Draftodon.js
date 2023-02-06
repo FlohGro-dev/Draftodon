@@ -454,16 +454,17 @@ function Draftodon_publishDraftAsPoll() {
     draft.content = removeCharacterLimitIndicatorFromText(draft.content)
     draft.update()
     let text = draft.content
-    // check if more than one line exists
-    let lines = text.split("\n")
-    if(!isPostInLimits(text,0)){
-        Draftodon_showCharacterLimit()
-        return undefined
-    }
+    
     if (isPostEmpty(text)) {
         // empty draft
         app.displayWarningMessage("Draft is empty")
         context.fail("Draft is empty")
+        return undefined
+    }
+    // check if more than one line exists
+    let lines = text.split("\n")
+    if(!isPostInLimits(text,0)){
+        Draftodon_showCharacterLimit()
         return undefined
     }
 
@@ -537,20 +538,21 @@ function Draftodon_scheduleDraftAsPoll() {
     draft.content = removeCharacterLimitIndicatorFromText(draft.content)
     draft.update()
     let text = draft.content
-    // check if more than one line exists
-    let lines = text.split("\n")
-    if(!isPostInLimits(text,0)){
-        if(!isPostEpty(text)){
-        		Draftodon_showCharacterLimit()   
-        }
-        return undefined
-    }
+    
     if (isPostEmpty(text)) {
         // empty draft
         app.displayWarningMessage("Draft is empty")
         context.fail("Draft is empty")
         return undefined
     }
+    
+    // check if more than one line exists
+    let lines = text.split("\n")
+    if(!isPostInLimits(text,0)){
+        Draftodon_showCharacterLimit()
+        return undefined
+    }
+    
     let scheduledDate = getDateForScheduledPostFromPrompt()
     if(!scheduledDate){
         // no date selected
