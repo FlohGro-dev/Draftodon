@@ -33,9 +33,3 @@ You can choose the amount you want to donate on the platforms linked on [my webs
 <a href="https://www.patreon.com/flohgro" target="_blank"><img src="https://user-images.githubusercontent.com/13785667/162812708-55b96cdc-8c32-4433-a340-6dd4c1f7326d.jpg" alt="Become A patreon" style="height: 110px !important;width: 220px !important;" ></a>
 
 <a href='https://ko-fi.com/flohgro' target='_blank'><img height='35' style='border:0px;height:55px;width:220px' src='https://az743702.vo.msecnd.net/cdn/kofi1.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
-
-## Changelog
-
-### Draftodon 1.0 - initial Release
-
-*this is the initial version of Draftodon*
