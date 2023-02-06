@@ -540,7 +540,9 @@ function Draftodon_scheduleDraftAsPoll() {
     // check if more than one line exists
     let lines = text.split("\n")
     if(!isPostInLimits(text,0)){
-        Draftodon_showCharacterLimit()
+        if(!isPostEpty(text)){
+        		Draftodon_showCharacterLimit()   
+        }
         return undefined
     }
     if (isPostEmpty(text)) {
