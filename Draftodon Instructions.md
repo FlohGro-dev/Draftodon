@@ -1,10 +1,10 @@
 # Draftodon Action Group Instructions
 
-**created by [@FlohGro](https://mastodon.social/@FlohGro)**
+**created by [@FlohGro](https://social.lol/@flohgro)**
 
 - **Website:** [flohgro.com](https://flohgro.com)  
 - **Drafts Forums:** [@FlohGro](https://forums.getdrafts.com/u/flohgro/summary)
-- **Mastodon:** [@FlohGro](https://mastodon.social/@FlohGro)
+- **Mastodon:** [@FlohGro](https://social.lol/@flohgro)
 
 > Welcome to Draftodon - an Action Group for Draft to integrate with Mastodon.
 > **IMPORTANT: Before running any other Action, you have to run the "Draftodon Setup/Update" Action which downloads the latest version of Draftodon from this repository.**
@@ -55,7 +55,7 @@ If you encounter any issues or have additional feature requests you can reach ou
 
 - report / request issues in the GitHub repository [here](https://github.com/FlohGro-dev/Draftodon/issues)
 - take part in the conversation in the Drafts forums [here](https://forums.getdrafts.com/t/draftodon-a-drafts-action-group-for-mastodon/13962)
-- reach out on Mastodon by mentioning [@FlohGro](https://mastodon.social/@FlohGro)
+- reach out on Mastodon by mentioning [@FlohGro](https://social.lol/@flohgro)
 - contact me on other platforms of your choice [here](https://flohgro.com/contactme)
 
 ## Created Files
@@ -69,5 +69,5 @@ I don't recommend to delete these files unless you have issues using Draftodon. 
 
 ## Changelog
 
-To stay up to date on new updates you can follow me on [Mastodon](https://mastodon.social/@FlohGro) or take part in the converstaion in the [Drafts forums post]()
+To stay up to date on new updates you can follow me on [Mastodon](https://social.lol/@flohgro) or take part in the converstaion in the [Drafts forums post]()
 You can find a changelog of updates to Action Group in the [Changelog](https://github.com/FlohGro-dev/Draftodon#changelog) section of the README in this repository.
