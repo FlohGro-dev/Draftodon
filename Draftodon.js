@@ -415,8 +415,11 @@ function Draftodon_scheduleDraftAsSinglePost(visibility = "public") {
     }
 }
 
-function Draftodon_publishThreadFromDraft() {
+function Draftodon_publishThreadFromDraft(visibility = "public") {
     if(!Draftodon_readSettingsIntoVars()){
+        return undefined
+    }
+    if(!isValidVisibility(visibility)){
         return undefined
     }
     let text = removeCharacterLimitIndicatorFromText(editor.getText())
@@ -427,7 +430,8 @@ function Draftodon_publishThreadFromDraft() {
         return undefined
     }
     return mastodon_publishThread({
-        "text": text
+        "text": text,
+        "visibility": visibility
     })
 }
 
@@ -953,7 +957,8 @@ function mastodon_getScheduledStatuses() {
 // publish thread using the publishStatusUpdate function
 function mastodon_publishThread({
     text,
-    scheduleTime = undefined
+    scheduleTime = undefined,
+    visibility = "public"
 }) {
     // abort if scheduledTime is provided - not supported through the API
     if (scheduleTime) {
@@ -971,7 +976,7 @@ function mastodon_publishThread({
         let statusUpdate = new MastodonTextStatusUpdate({
             statusText: postText,
             //inReplyToId: (postCtr > 1 ? "id" : null),
-            visibility: (postCtr > 1 ? "unlisted" : "public")
+            visibility: (postCtr > 1 ? "unlisted" : visibility)
         })
         statusUpdates.push(statusUpdate)
         tmpPosts.push(postText)

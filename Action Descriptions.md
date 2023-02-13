@@ -73,6 +73,9 @@ This Action is helpful if you compose a longer post and you are not sure if it w
 ## post draft
 
 This Action will do excatly what its name implies. it will post the contents of the draft to mastodon. Therefore it will use the configured mastodon instance in "Draftodon Settings".
+
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+
 If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
 > After Success Setting: *Archive*
@@ -80,7 +83,11 @@ If you run this the first time, you will need to authenticate Drafts for your ac
 ## schedule draft
 
 This Action will schedule the current draft as prompt to mastodon. It will present a prompt where you can set the date and time when it should be published, when you select a date the draft will be sent to mastodon and schedule it for publishing.
-If you want to chack your scheduled posts you can use the "show scheduled posts" Action
+If you want to chack your scheduled posts you can use the "show scheduled posts" Action.
+
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+
+If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
 > After Success Setting: *Archive*
 
@@ -99,6 +106,10 @@ option 3
 
 The Action will present a prompt to show you the created poll and you can make adjustments to the default settings like changing the expire date, allowing multiple answers or hiding the totals in the poll.
 
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+
+If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
+
 > After Success Setting: *Archive*
 
 ## schedule draft as poll
@@ -116,6 +127,10 @@ option 3
 
 The Action will present a prompt to show you the created poll and you can make adjustments to the default settings like changing the expire date, allowing multiple answers or hiding the totals in the poll.
 
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+
+If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
+
 > After Success Setting: *Archive*
 
 ## post draft with content warning
@@ -131,6 +146,10 @@ which will be hidden behind the content warning
 
 If the draft only consist of one line, the Action will consider the text as the text that shall be hidden and will ask for the spoiler text in a prompt.
 
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+
+If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
+
 > After Success Setting: *Archive*
 
 ## schedule draft with content warning
@@ -145,6 +164,10 @@ which will be hidden behind the content warning
 ```
 
 If the draft only consist of one line, the Action will consider the text as the text that shall be hidden and will ask for the spoiler text in a prompt.
+
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+
+If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
 > After Success Setting: *Archive*
 
@@ -169,6 +192,10 @@ The Action will:
 - show you an html preview of the thread to check how it will look on mastodon (if any post in the Thread is not valid, it will be displayed in the html preview)
 - publish the Thread on Mastodon if it is valid AND you select "continue" in the html preview
 	- the first post of the thread will be a public post, every subsequent post will be an unlisted reply - therefore it won't clutter up the public timelines of your followers, if they open the first post, they will see all subsequent replies.
+
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+
+If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
 > After Success Setting: *Archive*
 
