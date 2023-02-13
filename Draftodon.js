@@ -1012,7 +1012,7 @@ function mastodon_publishThread({
                     let statusUpdate = new MastodonTextStatusUpdate({
                         statusText: post,
                         inReplyToId: (count > 1 ? inReplyToId : null),
-                        visibility: (count > 1 ? "unlisted" : "public")
+                        visibility: (count > 1 ? "unlisted" : visibility)
                         //                        scheduledAt: (scheduleTime ? scheduledTime.toISOString() : null)
                     })
                     result = mastodon_postStatusUpdate(statusUpdate)
@@ -1490,6 +1490,8 @@ function isValidVisibility(visibility){
     } else {
         app.displayErrorMessage("invalid visibility configured")
         alert("ERROR:\n\nThe configured visibility \"" + visibility + "\" is not valid. Please update the configured visibility in the \"Define Template# Tag\" step of the Action to one of the following values:\npublic = Visible to everyone, shown in public timelines.\nunlisted = Visible to public, but not included in public timelines.\nprivate = Visible to followers only, and to any mentioned users.\ndirect = Visible only to mentioned users.")
+        context.fail()
+        return false
     }
 
 }
