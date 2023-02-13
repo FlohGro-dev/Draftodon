@@ -2,16 +2,16 @@
 
 Draftodon - a [Drafts](https://getdrafts.com) Action Group to integrate with [Mastodon](https://joinmastodon.org).
 
-**created by [@FlohGro](https://mastodon.social/@FlohGro)**
+**created by [@FlohGro](https://social.lol/@flohgro)**
 
 - **Website:** [flohgro.com](https://flohgro.com)  
 - **Drafts Forums:** [@FlohGro](https://forums.getdrafts.com/u/flohgro/summary)
-- **Mastodon:** [@FlohGro](https://mastodon.social/@FlohGro)
+- **Mastodon:** [@FlohGro](https://social.lol/@flohgro)
 
 This repository contains the underlying functions and the documentation for the Draftodon Action Group.
 You can install the Draftodon Action Group from the Drafts directory: [Draftodon](https://directory.getdrafts.com/g/2GL)
 
-If you encounter any issues please open an issue in the repository or reach out to me in the [Drafts forum](https://forums.getdrafts.com/t/draftodon-a-drafts-action-group-for-mastodon/13962) or of course on [Mastodon](https://mastodon.social/@FlohGro) ✌🏽
+If you encounter any issues please open an issue in the repository or reach out to me in the [Drafts forum](https://forums.getdrafts.com/t/draftodon-a-drafts-action-group-for-mastodon/13962) or of course on [Mastodon](https://social.lol/@flohgro) ✌🏽
 
 ## Draftodon Instructions
 

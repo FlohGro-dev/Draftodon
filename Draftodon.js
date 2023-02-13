@@ -1,6 +1,6 @@
 // Draftodon created by FlohGro
 // a file fo helpful functions to integrate Drafts and Mastodon
-// - https://mastodon.social/@FlohGro
+// - https://social.lol/@flohgro
 // - https://flohgro.com
 //
 // feedback and requests welcome ✌️
@@ -14,7 +14,10 @@
 const MastodonVisibilities = ["public", "unlisted", "private", "direct"]
 const MastodonEndpoints = {
     "STATUS_UPDATE": "/api/v1/statuses",
-    "SCHEDULED_STATUSES": "/api/v1/scheduled_statuses"
+    "SCHEDULED_STATUSES": "/api/v1/scheduled_statuses",
+    "HOME": "/api/v1/timelines/home",
+    "SERVER_INFO": "/api/v2/instance",
+    "WEEKLY_ACTIVITY": "/api/v1/instance/activity"
 }
 let DraftodonSettings = {
     "mastodonInstance": "",
@@ -298,11 +301,10 @@ function Draftodon_showCharacterLimit() {
     Draftodon_readSettingsIntoVars();
 
     //remove indicator, in case it was called before
-    draft.content = removeCharacterLimitIndicatorFromText(draft.content)
-    draft.update()
-
+    editor.setText(removeCharacterLimitIndicatorFromText(editor.getText()))
+    
     //info on length
-    contentLength = draft.content.length;
+    contentLength = editor.getText().length;
 
     if (contentLength > DraftodonSettings.characterLimit) {
         editor.setTextInRange(DraftodonSettings.characterLimit, 0, DraftodonSettings.characterLimitIndicator);
@@ -312,15 +314,19 @@ function Draftodon_showCharacterLimit() {
         remaining = DraftodonSettings.characterLimit - contentLength;
         app.displayInfoMessage(remaining.toString() + " characters remaining");
     }
-    draft.update();
 }
 
 // post draft as single post
-function Draftodon_publishDraftAsSinglePost() {
+function Draftodon_publishDraftAsSinglePost(visibility = "public") {
     if(!Draftodon_readSettingsIntoVars()){
         return undefined
     }
-    let text = removeCharacterLimitIndicatorFromText(draft.content)
+    
+    if(!isValidVisibility(visibility)){
+        return undefined
+    }
+    
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
             // empty draft
@@ -331,7 +337,8 @@ function Draftodon_publishDraftAsSinglePost() {
 
         // valid post, publish it
         let statusUpdate = new MastodonTextStatusUpdate({
-            statusText: text
+            statusText: text,
+            visibility: visibility
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
@@ -356,11 +363,14 @@ function Draftodon_publishDraftAsSinglePost() {
 }
 
 // schedule draft as single post
-function Draftodon_scheduleDraftAsSinglePost() {
+function Draftodon_scheduleDraftAsSinglePost(visibility = "public") {
     if(!Draftodon_readSettingsIntoVars()){
         return undefined
     }
-    let text = removeCharacterLimitIndicatorFromText(draft.content)
+    if(!isValidVisibility(visibility)){
+        return undefined
+    }
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
             // empty draft
@@ -374,7 +384,8 @@ function Draftodon_scheduleDraftAsSinglePost() {
             // user selected schedule date
             let statusUpdate = new MastodonTextStatusUpdate({
                 statusText: text,
-                scheduledAt: scheduleDate.toISOString()
+                scheduledAt: scheduleDate.toISOString(),
+                visibility: visibility
             })
             let result = mastodon_postStatusUpdate(statusUpdate)
             if (result) {
@@ -404,13 +415,14 @@ function Draftodon_scheduleDraftAsSinglePost() {
     }
 }
 
-function Draftodon_publishThreadFromDraft() {
+function Draftodon_publishThreadFromDraft(visibility = "public") {
     if(!Draftodon_readSettingsIntoVars()){
         return undefined
     }
-    draft.content = removeCharacterLimitIndicatorFromText(draft.content)
-    draft.update()
-    let text = draft.content
+    if(!isValidVisibility(visibility)){
+        return undefined
+    }
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
     if (isPostEmpty(text)) {
         // empty draft
         app.displayWarningMessage("Draft is empty")
@@ -418,7 +430,8 @@ function Draftodon_publishThreadFromDraft() {
         return undefined
     }
     return mastodon_publishThread({
-        "text": text
+        "text": text,
+        "visibility": visibility
     })
 }
 
@@ -428,9 +441,7 @@ function Draftodon_scheduleThreadFromDraft() {
     if(!Draftodon_readSettingsIntoVars()){
         return undefined
     }
-    draft.content = removeCharacterLimitIndicatorFromText(draft.content)
-    draft.update()
-    let text = draft.content
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
     if (isPostEmpty(text)) {
         // empty draft
         app.displayWarningMessage("Draft is empty")
@@ -447,13 +458,16 @@ function Draftodon_scheduleThreadFromDraft() {
     })
 }
 
-function Draftodon_publishDraftAsPoll() {
+function Draftodon_publishDraftAsPoll(visibility = "public") {
     if(!Draftodon_readSettingsIntoVars()){
         return undefined
     }
-    draft.content = removeCharacterLimitIndicatorFromText(draft.content)
-    draft.update()
-    let text = draft.content
+    
+    if(!isValidVisibility(visibility)){
+        return undefined
+    }
+    
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
     
     if (isPostEmpty(text)) {
         // empty draft
@@ -513,7 +527,8 @@ function Draftodon_publishDraftAsPoll() {
             pollOptions: pollOptions,
             allowMultiole: allowMultiole,
             hideTotals: hideTotals,
-            expiresIn: expiresIn
+            expiresIn: expiresIn,
+            visibility: visibility
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
@@ -531,13 +546,16 @@ function Draftodon_publishDraftAsPoll() {
     }
 }
 
-function Draftodon_scheduleDraftAsPoll() {
+function Draftodon_scheduleDraftAsPoll(visibility = "public") {
     if(!Draftodon_readSettingsIntoVars()){
         return undefined
     }
-    draft.content = removeCharacterLimitIndicatorFromText(draft.content)
-    draft.update()
-    let text = draft.content
+    
+    if(!isValidVisibility(visibility)){
+        return undefined
+    }
+    
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
     
     if (isPostEmpty(text)) {
         // empty draft
@@ -606,7 +624,8 @@ function Draftodon_scheduleDraftAsPoll() {
             allowMultiole: allowMultiole,
             hideTotals: hideTotals,
             expiresIn: expiresIn,
-            scheduledAt: scheduledDate.toISOString()
+            scheduledAt: scheduledDate.toISOString(),
+            visibility: visibility
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
@@ -626,11 +645,16 @@ function Draftodon_scheduleDraftAsPoll() {
 }
 
 // post draft with content warning
-function Draftodon_publishDraftWithContentWarning() {
+function Draftodon_publishDraftWithContentWarning(visibility = "public") {
     if(!Draftodon_readSettingsIntoVars()){
         return undefined
     }
-    let text = removeCharacterLimitIndicatorFromText(draft.content)
+    
+    if(!isValidVisibility(visibility)){
+        return undefined
+    }
+    
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
             // empty draft
@@ -673,7 +697,8 @@ function Draftodon_publishDraftWithContentWarning() {
         let statusUpdate = new MastodonTextStatusUpdate({
             statusText: statusUpdateText,
             sensitive: true,
-            spoilerText: spoilerText
+            spoilerText: spoilerText,
+            visibility: visibility
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
@@ -698,11 +723,16 @@ function Draftodon_publishDraftWithContentWarning() {
 }
 
 // schedule draft with content warning
-function Draftodon_scheduleDraftWithContentWarning() {
+function Draftodon_scheduleDraftWithContentWarning(visibility = "public") {
     if(!Draftodon_readSettingsIntoVars()){
         return undefined
     }
-    let text = removeCharacterLimitIndicatorFromText(draft.content)
+    
+    if(!isValidVisibility(visibility)){
+        return undefined
+    }
+    
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
             // empty draft
@@ -751,7 +781,8 @@ function Draftodon_scheduleDraftWithContentWarning() {
             statusText: statusUpdateText,
             sensitive: true,
             spoilerText: spoilerText,
-            scheduledAt: scheduledDate.toISOString()
+            scheduledAt: scheduledDate.toISOString(),
+            visibility: visibility
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
@@ -926,7 +957,8 @@ function mastodon_getScheduledStatuses() {
 // publish thread using the publishStatusUpdate function
 function mastodon_publishThread({
     text,
-    scheduleTime = undefined
+    scheduleTime = undefined,
+    visibility = "public"
 }) {
     // abort if scheduledTime is provided - not supported through the API
     if (scheduleTime) {
@@ -944,7 +976,7 @@ function mastodon_publishThread({
         let statusUpdate = new MastodonTextStatusUpdate({
             statusText: postText,
             //inReplyToId: (postCtr > 1 ? "id" : null),
-            visibility: (postCtr > 1 ? "unlisted" : "public")
+            visibility: (postCtr > 1 ? "unlisted" : visibility)
         })
         statusUpdates.push(statusUpdate)
         tmpPosts.push(postText)
@@ -980,7 +1012,7 @@ function mastodon_publishThread({
                     let statusUpdate = new MastodonTextStatusUpdate({
                         statusText: post,
                         inReplyToId: (count > 1 ? inReplyToId : null),
-                        visibility: (count > 1 ? "unlisted" : "public")
+                        visibility: (count > 1 ? "unlisted" : visibility)
                         //                        scheduledAt: (scheduleTime ? scheduledTime.toISOString() : null)
                     })
                     result = mastodon_postStatusUpdate(statusUpdate)
@@ -1374,12 +1406,10 @@ function Draftodon_followFlohGro() {
     if(!Draftodon_readSettingsIntoVars()){
         return undefined
     }
-    const userIdFlohGro = "108132565867141294"
-    ///api/v1/accounts/mastodon.social/108132565867141294/follow
     let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
     // use hard path, since it didn't work otherwise
     let postRequest = {
-        "path": "/api/v2/search?q=@flohgro@mastodon.social&resolve=true&limit=5",
+        "path": "/api/v2/search?q=@flohgro@social.lol&resolve=true&limit=5",
         "method": "GET",
     }
 
@@ -1401,7 +1431,7 @@ function Draftodon_followFlohGro() {
                 let id = account["id"]
                 let username = account["username"]
                 // check if correct account was found
-                if (acct == "FlohGro@mastodon.social" && username == "FlohGro") {
+                if (acct.toLocaleLowerCase() == "flohgro@social.lol" && username.toLocaleLowerCase() == "flohgro") {
                     let followRequest = {
                         "path": "/api/v1/accounts/" + id + "/follow",
                         "method": "POST",
@@ -1425,7 +1455,7 @@ function Draftodon_followFlohGro() {
     }
     if (!foundAccount) {
         // open the url since account was not found
-        app.openURL("https://mastodon.social/@FlohGro", true)
+        app.openURL("https://social.lol/@FlohGro", true)
     }
 }
 
@@ -1446,4 +1476,22 @@ function Draftodon_supportDevelopment(){
         app.displayInfoMessage("cancelled supporting development 😪")
     }
     
+}
+
+function isValidVisibility(visibility){
+    	/*
+        public = Visible to everyone, shown in public timelines.
+		unlisted = Visible to public, but not included in public timelines.
+		private = Visible to followers only, and to any mentioned users.
+		direct = Visible only to mentioned users.
+	*/
+    if(MastodonVisibilities.includes(visibility)){
+        return true
+    } else {
+        app.displayErrorMessage("invalid visibility configured")
+        alert("ERROR:\n\nThe configured visibility \"" + visibility + "\" is not valid. Please update the configured visibility in the \"Define Template# Tag\" step of the Action to one of the following values:\npublic = Visible to everyone, shown in public timelines.\nunlisted = Visible to public, but not included in public timelines.\nprivate = Visible to followers only, and to any mentioned users.\ndirect = Visible only to mentioned users.")
+        context.fail()
+        return false
+    }
+
 }
