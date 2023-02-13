@@ -1404,7 +1404,6 @@ function Draftodon_followFlohGro() {
     let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
     // use hard path, since it didn't work otherwise
     let postRequest = {
-        //"path": "/api/v2/search?q=@flohgro@mastodon.social&resolve=true&limit=5",
         "path": "/api/v2/search?q=@flohgro@social.lol&resolve=true&limit=5",
         "method": "GET",
     }
@@ -1421,7 +1420,6 @@ function Draftodon_followFlohGro() {
         // successfully retrieved account(s), check if correct account is included
         let data = response.responseData
         //check if accounts param is available
-        alert(JSON.stringify(data))
         if (data["accounts"]) {
             for (account of data["accounts"]) {
                 let acct = account["acct"]
