@@ -12,7 +12,7 @@
 **TL;DR**
 
 - Run Draftodon Setup/Update to download the Draftodon.js file into the iCloud Folder of Drafts
-- Configure your mastodon_instance and mastodon_handle in the Draftodon Settings Action by editing the action and change the contents of the Template Tags.
+- Configure your 'mastodon_instance' and 'mastodon_handle' in the Draftodon Settings Action by editing the action and change the contents of the Template Tags (DO NOT CHANGE THE NAMES OF THE TEMPLATES).
 - Start using Draftodon - “warning” Draftodon posts directly to the configured account once you authenticated it
 - Draftodon contains several Actions to integrate Drafts with Mastodon. You can download the Action Group from the [Drafts directory](https://directory.getdrafts.com/g/2GL)
 
