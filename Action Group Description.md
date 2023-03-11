@@ -17,7 +17,7 @@ To read through the instructions of Draftodon look into the dedicated file in th
 ### TL;DR
 
 - Run `Draftodon Setup/Update` to download the `Draftodon.js` file into the iCloud Folder of Drafts
-- Configure your `mastodon_instance` and `mastodon_handle` in the `Draftodon Settings`Action
+- Configure your `mastodon_instance` and `mastodon_handle` in the `Draftodon Settings`Action by editing the Action and changing the corresponding "Define Template Tag" steps of the Action
 - Start using *Draftodon* - "*warning*" Draftodon posts directly to the configured account once you authenticated it
 
 ## Support Development

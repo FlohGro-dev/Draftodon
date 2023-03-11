@@ -29,6 +29,8 @@ Since Draftodon contains a lot of Actions and you may not need every single of t
 
 Please **never** rename or **delete** the `Draftodon` and `Draftodon Settings` Action at the top of the Action Group (If you do so, most other Action will not work anymore).
 
+Configure your `mastodon_instance` and `mastodon_handle` in the `Draftodon Settings`Action by editing the Action and changing the corresponding "Define Template Tag" steps of the Action.
+
 You can use Draftodon from the Action List on the side or in the Action Bar over the Keyboard. All unnecessary Actions are disabled in the Action Bar.
 
 Draftodon posts directly to your Mastodon Profile if you run the Actions it will not ask you for further confirmation (if the Draft contains a valid post). If you want another confirmation you can enable the "confirm before running" toggle in the settings of each Action. Otherwise Draftodon works as frictionless as possible.
