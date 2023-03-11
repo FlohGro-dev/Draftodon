@@ -17,7 +17,8 @@ const MastodonEndpoints = {
     "SCHEDULED_STATUSES": "/api/v1/scheduled_statuses",
     "HOME": "/api/v1/timelines/home",
     "SERVER_INFO": "/api/v2/instance",
-    "WEEKLY_ACTIVITY": "/api/v1/instance/activity"
+    "WEEKLY_ACTIVITY": "/api/v1/instance/activity",
+    "SEARCH": "/api/v2/search"
 }
 let DraftodonSettings = {
     "mastodonInstance": "",
@@ -907,6 +908,81 @@ function Draftodon_editScheduledPosts() {
     }
 }
 
+// reply to post; url to post is in the first line of the draft, reply is in the content of the draft
+function Draftodon_replyToPost(visibility = "public") {
+    if (!Draftodon_readSettingsIntoVars()) {
+        return undefined
+    }
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
+    let lines = text.split("\n")
+    if (lines.length < 2) {
+        alert("the draft must have at least two lines. insert the url of the status you want to reply to in the first line and type your reply in the following lines")
+        context.fail()
+        return undefined
+    }
+    const replyToStatusUrl = lines.shift()
+    const replyText = lines.join("\n")
+
+    let status = mastodon_searchStatusFromUrl(replyToStatusUrl)
+
+    if (!status) {
+        // no status was found
+        alert("no status was found for url \"" + replyToStatusUrl + "\". The url to the status you want to reply to should be in the first line of the draft.")
+        return undefined
+    }
+
+    const statusId = status.id;
+
+    if (isPostInLimits(replyText, 0)) {
+        if (isPostEmpty(replyText)) {
+            // empty draft
+            app.displayWarningMessage("Reply Post is empty")
+            context.fail("Reply Post is empty")
+            return undefined
+        }
+        let statusUpdate = new MastodonTextStatusUpdate({
+            statusText: replyText,
+            visibility: visibility,
+            inReplyToId: statusId
+        })
+        let result = mastodon_postStatusUpdate(statusUpdate)
+        if (result) {
+            addConfiguredTagsToDraft();
+            app.displaySuccessMessage("published reply")
+        } else {
+            context.fail()
+            app.displayErrorMessage("publishing draft failed, check Action Log for details")
+        }
+        return result
+    } else {
+        // post is not in limits, show character limit and abort publish
+        if (!isPostEmpty(text)) {
+            Draftodon_showCharacterLimit()
+            context.fail()
+        } else {
+            app.displayWarningMessage("Reply Post is empty")
+            context.fail("Reply Post is empty")
+        }
+        return undefined
+    }
+
+    function replay(id) {
+        const responseReplay = mastodon.request({
+            "path": statusPath,
+            "method": "POST",
+            "parameters": {
+                "status": toot,
+                "in_reply_to_id": id,
+                "visibility": "public"
+            }
+        });
+    }
+
+
+    script.complete();
+}
+
+
 // helper functions (no drafts actions)
 
 // post publishing
@@ -1114,6 +1190,28 @@ function mastodon_rescheduleScheduledPost(id) {
         return true
     }
 
+}
+
+// search status with given url
+function mastodon_searchStatusFromUrl(statusUrl) {
+    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
+    const response = mastodon.request({
+        "path": MastodonEndpoints.SEARCH,
+        "method": "GET",
+        "parameters": {
+            "q": statusUrl,
+            "type": "statuses",
+            "resolve": true
+        }
+    });
+
+    if (response.success) {
+        return response.responseData.statuses[0]
+    } else {
+        console.log(response.error);
+        context.fail();
+        return undefined
+    }
 }
 
 // parse results
