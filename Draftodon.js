@@ -21,12 +21,13 @@ const MastodonEndpoints = {
     "SEARCH": "/api/v2/search"
 }
 let DraftodonSettings = {
-    "mastodonInstance": "",
-    "mastodonHandle": "",
+    "mastodonInstances": [],
+    "mastodonHandles": [],
     "characterLimit": 0,
     "characterLimitIndicator": "",
     "threadDivider": "",
-    "tagsToAddOnSuccess": []
+    "tagsToAddOnSuccess": [],
+    "useMultipleAccounts": false
 }
 // class defines
 class MastodonTextStatusUpdate {
@@ -840,7 +841,14 @@ function Draftodon_editScheduledPosts() {
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
-    let scheduledStatuses = mastodon_getScheduledStatuses()
+    let mastodon = getMastodonObjectFromSettings()
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+    let scheduledStatuses = mastodon_getScheduledStatuses(mastodon)
     // sort them by scheduled date, earliest first
     scheduledStatuses.sort((a, b) => (a.scheduledAt > b.scheduledAt))
 
@@ -878,7 +886,7 @@ function Draftodon_editScheduledPosts() {
             let selectedOption = pSelectEdit.buttonPressed
             switch (selectedOption) {
                 case "reschedule":
-                    let rescheduleResult = mastodon_rescheduleScheduledPost(selectedStatus.id)
+                    let rescheduleResult = mastodon_rescheduleScheduledPost(selectedStatus.id, mastodon)
                     if (rescheduleResult) {
                         app.displaySuccessMessage("Rescheduled status \"" + selectedStatus.text + "\"")
                     } else {
@@ -887,7 +895,7 @@ function Draftodon_editScheduledPosts() {
                     }
                     break;
                 case "delete":
-                    let deleteResult = mastodon_deleteScheduledPost(selectedStatus.id);
+                    let deleteResult = mastodon_deleteScheduledPost(selectedStatus.id, mastodon);
                     if (deleteResult) {
                         app.displaySuccessMessage("Deleted scheduled status \"" + selectedStatus.text + "\"")
                     } else {
@@ -913,6 +921,13 @@ function Draftodon_replyToPost(visibility = "public") {
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
+    let mastodon = getMastodonObjectFromSettings()
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
     let text = removeCharacterLimitIndicatorFromText(editor.getText())
     let lines = text.split("\n")
     if (lines.length < 2) {
@@ -923,11 +938,12 @@ function Draftodon_replyToPost(visibility = "public") {
     const replyToStatusUrl = lines.shift()
     const replyText = lines.join("\n")
 
-    let status = mastodon_searchStatusFromUrl(replyToStatusUrl)
+    let status = mastodon_searchStatusFromUrl(replyToStatusUrl, mastodon)
 
     if (!status) {
         // no status was found
         alert("no status was found for url \"" + replyToStatusUrl + "\". The url to the status you want to reply to should be in the first line of the draft.")
+        context.fail()
         return undefined
     }
 
@@ -945,7 +961,7 @@ function Draftodon_replyToPost(visibility = "public") {
             visibility: visibility,
             inReplyToId: statusId
         })
-        let result = mastodon_postStatusUpdate(statusUpdate)
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
         if (result) {
             addConfiguredTagsToDraft();
             app.displaySuccessMessage("published reply")
@@ -965,21 +981,6 @@ function Draftodon_replyToPost(visibility = "public") {
         }
         return undefined
     }
-
-    function replay(id) {
-        const responseReplay = mastodon.request({
-            "path": statusPath,
-            "method": "POST",
-            "parameters": {
-                "status": toot,
-                "in_reply_to_id": id,
-                "visibility": "public"
-            }
-        });
-    }
-
-
-    script.complete();
 }
 
 
@@ -987,8 +988,13 @@ function Draftodon_replyToPost(visibility = "public") {
 
 // post publishing
 
-function mastodon_postStatusUpdate(statusUpdate) {
-    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
+function mastodon_postStatusUpdate(statusUpdate, mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
 
     let postRequest = {
         "path": MastodonEndpoints.STATUS_UPDATE,
@@ -1001,7 +1007,7 @@ function mastodon_postStatusUpdate(statusUpdate) {
     if (!response.success) {
         if (response.statusCode == 999) {
             console.log("Post Failed: " + response.statusCode + ", " + response.error)
-            alert("Post Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandle + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            alert("Post Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
             context.fail()
             return undefined
         } else {
@@ -1019,9 +1025,13 @@ function mastodon_postStatusUpdate(statusUpdate) {
 
 // retrieve scheduled statuses
 
-function mastodon_getScheduledStatuses() {
-    // create Mastodon instance
-    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
+function mastodon_getScheduledStatuses(mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
 
     // get scheduled statuses from API
     let response = mastodon.request({
@@ -1032,7 +1042,7 @@ function mastodon_getScheduledStatuses() {
     if (!response.success) {
         if (response.statusCode == 999) {
             console.log("Post Failed: " + response.statusCode + ", " + response.error)
-            alert("Post Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandle + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            alert("Post Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
             context.fail()
             return undefined
         } else {
@@ -1054,6 +1064,13 @@ function mastodon_publishThread({
     scheduleTime = undefined,
     visibility = "public"
 }) {
+    let mastodon = getMastodonObjectFromSettings()
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
     // abort if scheduledTime is provided - not supported through the API
     if (scheduleTime) {
         app.displayErrorMessage("Scheduling Thread is not possible through the API")
@@ -1109,7 +1126,7 @@ function mastodon_publishThread({
                         visibility: (count > 1 ? "unlisted" : visibility)
                         //                        scheduledAt: (scheduleTime ? scheduledTime.toISOString() : null)
                     })
-                    result = mastodon_postStatusUpdate(statusUpdate)
+                    result = mastodon_postStatusUpdate(statusUpdate, mastodon)
                     retryCount++
                     if (retryCount >= maxRetries) {
                         success = false;
@@ -1146,8 +1163,13 @@ function mastodon_publishThread({
 }
 
 // cancel / delete scheduled post
-function mastodon_deleteScheduledPost(id) {
-    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
+function mastodon_deleteScheduledPost(id, mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
     let postRequest = {
         "path": MastodonEndpoints.SCHEDULED_STATUSES + "/" + id,
         "method": "DELETE",
@@ -1165,12 +1187,17 @@ function mastodon_deleteScheduledPost(id) {
 }
 
 // reschedule scheduled post
-function mastodon_rescheduleScheduledPost(id) {
+function mastodon_rescheduleScheduledPost(id, mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
     let date = getDateForScheduledPostFromPrompt()
     if (!date) {
         return false
     }
-    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
     let postRequest = {
         "path": MastodonEndpoints.SCHEDULED_STATUSES + "/" + id,
         "method": "PUT",
@@ -1193,8 +1220,7 @@ function mastodon_rescheduleScheduledPost(id) {
 }
 
 // search status with given url
-function mastodon_searchStatusFromUrl(statusUrl) {
-    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
+function mastodon_searchStatusFromUrl(statusUrl, mastodon = getMastodonObjectFromSettings()) {
     const response = mastodon.request({
         "path": MastodonEndpoints.SEARCH,
         "method": "GET",
@@ -1213,6 +1239,38 @@ function mastodon_searchStatusFromUrl(statusUrl) {
         return undefined
     }
 }
+
+// multiple accounts handling
+function getMastodonObjectFromSettings() {
+    let instanceToUse = "";
+    let handleToUse = "";
+    // first check if multiple accounts are used
+    if (DraftodonSettings.useMultipleAccounts) {
+        // multiple accouns are used, ask the user to select the account
+        let p = new Prompt()
+        p.title = "select account"
+        // iterate through the configured instances and use the index to retrieve the values (sizes must match which is checked in the readSettingsIntoVars function)
+        for (index in DraftodonSettings.mastodonInstances) {
+            // display the user handle and instance in the button, but only store the index in the selected button
+            p.addButton(DraftodonSettings.mastodonHandles[index] + "@" + DraftodonSettings.mastodonInstances[index], index)
+        }
+        if (!p.show()) {
+            // user didn't select an account
+            return undefined
+        } else {
+            let selectedIndex = p.buttonPressed;
+            instanceToUse = DraftodonSettings.mastodonInstances[selectedIndex]
+            handleToUse = DraftodonSettings.mastodonHandles[selectedIndex]
+        }
+    } else {
+        // just use the first item in the settings since not mulitple accounts are used
+        instanceToUse = DraftodonSettings.mastodonInstances[0]
+        handleToUse = DraftodonSettings.mastodonHandles[0]
+    }
+    let mastodon = Mastodon.create(instanceToUse, handleToUse)
+    return mastodon
+}
+
 
 // parse results
 
@@ -1310,7 +1368,7 @@ function getDateForScheduledPostFromPrompt() {
     startDatePicker.setMinutes(startDatePicker.getMinutes() + 10)
     p.addDatePicker("scheduledDateTime", "", startDate, {
         "minimumDate": startDatePicker,
-        "minuteInterval": 15,
+        "minuteInterval": 1,
         "mode": "dateAndTime"
     })
     p.addButton("schedule")
@@ -1453,21 +1511,53 @@ function getPostAsHtml({
 // settings
 // read Mastodon Settings into variables
 function Draftodon_readSettingsIntoVars() {
-    DraftodonSettings.mastodonInstance = draft.processTemplate("[[mastodon_instance]]")
-    // check if instance was set, otherwise return false
-    if (DraftodonSettings.mastodonInstance == "UNDEFINED") {
-        alert("ERROR:\nyou didn't configure your Mastodon instance in the Draftodon Settings Action.\nThis is necessary to authenticate Drafts and use Draftodon")
-        app.displayErrorMessage("Mastodon Instance not configured")
+    // read the configured instances from the template tag
+    const mastodonInstanceSetting = draft.processTemplate("[[mastodon_instance]]").trim()
+    if (mastodonInstanceSetting == "UNDEFINED") {
+        alert("ERROR:\nyou didn't configure your Mastodon instance(s) in the Draftodon Settings Action.\nThis is necessary to authenticate Drafts and use Draftodon")
+        app.displayErrorMessage("Mastodon Instance(s) not configured")
         context.fail()
         return false
     }
-    DraftodonSettings.mastodonHandle = draft.processTemplate("[[mastodon_handle]]")
-    if (DraftodonSettings.mastodonHandle == "UNDEFINED") {
-        alert("ERROR:\nyou didn't configure your Mastodon Handle in the Draftodon Settings Action.\nThis is necessary to authenticate Drafts and use Draftodon")
-        app.displayErrorMessage("Mastodon Handle not configured")
+    // if multiple lines are used, the user wants to use Draftodon with multiple accounts
+    let configuredInstances = mastodonInstanceSetting.split("\n")
+    configuredInstances = configuredInstances.filter((item) => {
+        if (item.trim().length > 0) {
+            return item
+        }
+    })
+    if (configuredInstances.length > 1) {
+        // the user did configure several instances, set the setting to true
+        DraftodonSettings.useMultipleAccounts = true
+    } else {
+        // only one instance was configured
+        DraftodonSettings.useMultipleAccounts = false
+    }
+    DraftodonSettings.mastodonInstances = configuredInstances
+
+    const mastodonHandleSettings = draft.processTemplate("[[mastodon_handle]]")
+    if (mastodonHandleSettings == "UNDEFINED") {
+        alert("ERROR:\nyou didn't configure your Mastodon Handle(s) in the Draftodon Settings Action.\nThis is necessary to authenticate Drafts and use Draftodon")
+        app.displayErrorMessage("Mastodon Handle(s) not configured")
         context.fail()
         return false
     }
+    // if multiple lines are used, the user wants to use Draftodon with multiple accounts & handles
+    let configuredHandles = mastodonHandleSettings.split("\n")
+    configuredHandles = configuredHandles.filter((item) => {
+        if (item.trim().length > 0) {
+            return item
+        }
+    })
+    if (configuredHandles.length != configuredInstances.length) {
+        // the user did not configure the same amount of handles compared to the instances
+        alert("ERROR:\nThe amount of configured instances and handles must match\nYou configured " + configuredInstances.length + " instance(s) and " + configuredHandles.length + " handle(s):\n\nconfigured instance(s):\n" + configuredInstances.join("\n") + "\n\nconfigured handle(s):\n" + configuredHandles.join("\n"))
+        app.displayErrorMessage("Instance and Handle amount must match")
+        context.fail()
+        return false
+    }
+    DraftodonSettings.mastodonHandles = configuredHandles
+
     DraftodonSettings.characterLimit = parseInt(draft.processTemplate("[[character_limit]]"))
     DraftodonSettings.characterLimitIndicator = draft.processTemplate("[[character_limit_indicator]]")
     DraftodonSettings.threadDivider = draft.processTemplate("[[thread_divider]]")
@@ -1522,7 +1612,7 @@ function Draftodon_followFlohGro() {
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
-    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstance, DraftodonSettings.mastodonHandle)
+    let mastodon = Mastodon.create(DraftodonSettings.mastodonInstances, DraftodonSettings.mastodonHandles)
     // use hard path, since it didn't work otherwise
     let postRequest = {
         "path": "/api/v2/search?q=@flohgro@social.lol&resolve=true&limit=5",
