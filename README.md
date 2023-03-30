@@ -37,6 +37,7 @@ You can choose the amount you want to donate on the platforms linked on [my webs
 
 - **new:** support to use Draftodon with multiple accounts (check out the instructions)
 - **new:** reply to status action - reply to a status just by pasting the url into the first line of the draft, write your repsponse and run the action
+- *minor:* added hints for authentication issues
 
 ### Draftodon 1.1
 
