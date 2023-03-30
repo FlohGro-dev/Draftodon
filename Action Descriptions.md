@@ -171,6 +171,15 @@ If you run this the first time, you will need to authenticate Drafts for your ac
 
 > After Success Setting: *Archive*
 
+## reply to status
+
+This Action lets you reply to a status. To reply to a status just copy the link of it and paste it into the first line of a Draft. Then type your reply below the url. The Action will validate that it is a correct status url and post the reply.
+
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+
+If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
+
+> After Success Setting: *Archive*
 
 ## post draft as thread
 

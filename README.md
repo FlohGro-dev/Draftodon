@@ -33,6 +33,18 @@ You can choose the amount you want to donate on the platforms linked on [my webs
 
 ## Changelog
 
+### Draftodon 1.2
+
+- **new:** support to use Draftodon with multiple accounts (check out the instructions)
+- **new:** reply to status action - reply to a status just by pasting the url into the first line of the draft, write your repsponse and run the action
+- *minor:* added hints for authentication issues
+
+### Draftodon 1.1
+
+- **new:** visibility added as optional parameter for publishing functions (defaults to "public")
+- **fixed:** showCharacterLimit issue (the limit indicator was added multiple times)
+- *minor:* updated mastodon profile links to @flohgro@social.lol
+
 ### Draftodon 1.0 - initial Release
 
 *this is the initial version of Draftodon*

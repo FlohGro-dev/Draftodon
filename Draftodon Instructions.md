@@ -34,6 +34,9 @@ Since Draftodon contains a lot of Actions and you may not need every single of t
 
 Please **never** rename or **delete** the `Draftodon` and `Draftodon Settings` Action at the top of the Action Group (If you do so, most other Action will not work anymore).
 
+Configure your `mastodon_instance` and `mastodon_handle` in the `Draftodon Settings` Action by editing the Action and changing the corresponding "Define Template Tag" steps of the Action.
+You can also use Draftodon with multiple accounts. for details checkout the [section](#draftodon-with-multiple-accounts) below.
+
 You can use Draftodon from the Action List on the side or in the Action Bar over the Keyboard. All unnecessary Actions are disabled in the Action Bar.
 
 Draftodon posts directly to your Mastodon Profile if you run the Actions it will not ask you for further confirmation (if the Draft contains a valid post). If you want another confirmation you can enable the "confirm before running" toggle in the settings of each Action. Otherwise Draftodon works as frictionless as possible.
@@ -41,6 +44,30 @@ Draftodon posts directly to your Mastodon Profile if you run the Actions it will
 ## Action Descriptions
 
 Every Draftodon Action contains a short description about its purpose / what it does. Due to the big amount of Actions you can also read through all descriptions in the [Action Descriptions](https://github.com/FlohGro-dev/Draftodon/blob/main/Action%20Descriptions.md) file.
+
+## Draftodon with multiple accounts
+
+To use Draftodon with multiple accounts you just need to configure every instance and handle that you might want to use.
+I tried to keep this as simple as possible and with no interruption for users with just one accout.
+
+To configure multiple accounts you need to add every instance and the corresponding handle to a new line in the `Define Template Tag` steps in the action.
+Lets assume I have two accounts that I want to use with Draftodon. The first account is `@FlohGro@social.lol` and the second one would be `@secoundAccount@mastodon.social`.
+
+I have to set the `mastodon_instance` template tag as:
+```
+social.lol
+mastodon.social
+```
+The `mastodon_handle` template tag must be configured accordingly to:
+```
+@FlohGro
+@secondAccount
+```
+
+Each new account has to be in a separate line and the order is important. As you can see in the example `@FlohGro` and `social.lol` are in the first line and `@secondAccount` and `mastodon.social` are in the second line of the corresponding template tag.
+If you mix up the order, this will not work.
+
+When you configured multiple accounts in the settings each time you want to publish something to Mastodon, the Action will display a prompt and ask you to pick the account that should publish the post.
 
 ## Support Development
 
