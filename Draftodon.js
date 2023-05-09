@@ -225,13 +225,18 @@ class MastodonPollStatusUpdate {
 class MastodonStatusUpdateResult {
     constructor({
         id,
+        url = null,
         scheduledAt = null
     }) {
         this.id = id
+        this.url = url
         this.scheduledAt = scheduledAt
     }
     getId() {
         return this.id
+    }
+    getUrl() {
+        return this.url
     }
     getScheduledAt() {
         return this.scheduledAt
@@ -344,7 +349,7 @@ function Draftodon_publishDraftAsSinglePost(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published draft")
         } else {
             context.fail()
@@ -393,7 +398,7 @@ function Draftodon_scheduleDraftAsSinglePost(visibility = "public") {
             if (result) {
                 let scheduledAtStr = getScheduledAtAsReadableString(result.scheduledAt)
                 app.displaySuccessMessage("scheduled post for " + scheduledAtStr)
-                addConfiguredTagsToDraft();
+                addConfiguredTagsAndUrlToDraft(result);
             } else {
                 app.displayErrorMessage("scheduling post failed, check action log for details")
                 context.fail()
@@ -534,7 +539,7 @@ function Draftodon_publishDraftAsPoll(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published poll")
         } else {
             context.fail()
@@ -631,7 +636,7 @@ function Draftodon_scheduleDraftAsPoll(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             let scheduledAtStr = getScheduledAtAsReadableString(result.scheduledAt)
             app.displaySuccessMessage("scheduled poll for " + scheduledAtStr)
         } else {
@@ -706,7 +711,7 @@ function Draftodon_publishDraftWithContentWarning(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published draft with content warning")
         } else {
             context.fail()
@@ -792,7 +797,7 @@ function Draftodon_scheduleDraftWithContentWarning(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("scheduled draft with content warning")
         } else {
             context.fail()
@@ -963,7 +968,7 @@ function Draftodon_replyToPost(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published reply")
         } else {
             context.fail()
@@ -1110,6 +1115,7 @@ function mastodon_publishThread({
         if (continueSelected) {
             // publish thread
             let count = 1
+            let firstStatusOfThread;
             let inReplyToId = ""
             let success = true
             const maxRetries = 5;
@@ -1127,6 +1133,9 @@ function mastodon_publishThread({
                         //                        scheduledAt: (scheduleTime ? scheduledTime.toISOString() : null)
                     })
                     result = mastodon_postStatusUpdate(statusUpdate, mastodon)
+                    if(count == 1){
+                        firstStatusOfThread = result
+                    }
                     retryCount++
                     if (retryCount >= maxRetries) {
                         success = false;
@@ -1139,7 +1148,7 @@ function mastodon_publishThread({
             }
             if (success) {
                 app.displaySuccessMessage("published thread")
-                addConfiguredTagsToDraft()
+                addConfiguredTagsAndUrlToDraft(firstStatusOfThread)
                 return true;
 
             } else {
@@ -1285,7 +1294,8 @@ function parseStatusUpdateResponse(data) {
         })
     } else {
         obj = new MastodonStatusUpdateResult({
-            id: data["id"]
+            id: data["id"],
+            url: data["url"]
         })
     }
     return obj
@@ -1587,7 +1597,7 @@ function createPostCountString(curPosition, length) {
     return "[" + curPosition + "/" + length + "]"
 }
 
-function addConfiguredTagsToDraft() {
+function addConfiguredTagsAndUrlToDraft(postResult = undefined) {
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
@@ -1595,8 +1605,12 @@ function addConfiguredTagsToDraft() {
         for (tag of DraftodonSettings.tagsToAddOnSuccess) {
             draft.addTag(tag)
         }
-        draft.update()
     }
+    if(postResult.url){
+        //alert(postResult.url)
+        draft.append("[public url](" + postResult.url + ")", "\n\n")
+    } 
+    draft.update()
 }
 
 function getScheduledAtAsReadableString(scheduledDate) {
