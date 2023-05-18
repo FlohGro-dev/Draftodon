@@ -49,6 +49,8 @@ Mastodon supports different visibilities for posts. The Actions in Draftodon tha
 - private: Visible to followers only, and to any mentioned users.
 - direct: Visible only to mentioned users.
 
+If you want to use Actions with different options for the visibility I recommend to duplicate them and change the visibility setting. Don't forget to rename the Actions for easier identification.
+
 You can find the official documentation of the visibilities in the [Mastodon API documentation](https://docs.joinmastodon.org/entities/Status/#visibility).
 
 ## Draftodon with multiple accounts
