@@ -42,7 +42,7 @@ Every Draftodon Action contains a short description about its purpose / what it 
 
 ## Visibility of Posts
 
-Mastodon supports different visibilities for posts. The Actions in Draftodon that publish posts will be default use `public` but you can change that by editing the actions and changing the template tag "post-visibility" to one of the following valid settings:
+Mastodon supports different visibilities for posts. The Actions in Draftodon that publish posts will be default use `public` but you can change that by editing the actions and adapting the template tag "post-visibility" to one of the following valid settings:
 
 - public: Visible to everyone, shown in public timelines.
 - unlisted: Visible to public, but not included in public timelines.
