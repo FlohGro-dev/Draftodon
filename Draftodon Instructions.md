@@ -40,6 +40,17 @@ Draftodon posts directly to your Mastodon Profile if you run the Actions it will
 
 Every Draftodon Action contains a short description about its purpose / what it does. Due to the big amount of Actions you can also read through all descriptions in the [Action Descriptions](https://github.com/FlohGro-dev/Draftodon/blob/main/Action%20Descriptions.md) file.
 
+## Visibility of Posts
+
+Mastodon supports different visibilities for posts. The Actions in Draftodon that publish posts will be default use `public` but you can change that by editing the actions and changing the template tag "post-visibility" to one of the following valid settings:
+
+- public: Visible to everyone, shown in public timelines.
+- unlisted: Visible to public, but not included in public timelines.
+- private: Visible to followers only, and to any mentioned users.
+- direct: Visible only to mentioned users.
+
+You can find the official documentation of the visibilities in the [Mastodon API documentation](https://docs.joinmastodon.org/entities/Status/#visibility).
+
 ## Draftodon with multiple accounts
 
 To use Draftodon with multiple accounts you just need to configure every instance and handle that you might want to use.

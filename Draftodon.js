@@ -977,7 +977,7 @@ function Draftodon_replyToPost(visibility = "public") {
         return result
     } else {
         // post is not in limits, show character limit and abort publish
-        if (!isPostEmpty(text)) {
+        if (!isPostEmpty(replyText)) {
             Draftodon_showCharacterLimit()
             context.fail()
         } else {
@@ -988,6 +988,74 @@ function Draftodon_replyToPost(visibility = "public") {
     }
 }
 
+// quote post (not officially supported right now, but will add emoji, mentions creator and adds a link to the origin post)
+function Draftodon_quotePost(visibility = "public") {
+    if (!Draftodon_readSettingsIntoVars()) {
+        return undefined
+    }
+    let mastodon = getMastodonObjectFromSettings()
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
+    let lines = text.split("\n")
+    if (lines.length < 2) {
+        alert("the draft must have at least two lines. insert the url of the status you want to quote in the first line and type the text you want to post together with your quote in the following lines")
+        context.fail()
+        return undefined
+    }
+    const quoteStatusUrl = lines.shift()
+    const quoteText = lines.join("\n")
+
+    let status = mastodon_searchStatusFromUrl(quoteStatusUrl, mastodon)
+
+    if (!status) {
+        // no status was found
+        alert("no status was found for url \"" + quoteStatusUrl + "\". The url to the status you want to quote should be in the first line of the draft.")
+        context.fail()
+        return undefined
+    }
+
+    let account = status.account.acct
+    let textToAdd = "💬 @" + account + "\n" + quoteStatusUrl
+
+    let statusText = quoteText + "\n\n" + textToAdd;
+
+    if (isPostInLimits(statusText, 0)) {
+        if (isPostEmpty(quoteText)) {
+            // empty draft
+            app.displayWarningMessage("Quote text is empty")
+            context.fail("Quote text is empty")
+            return undefined
+        }
+        let statusUpdate = new MastodonTextStatusUpdate({
+            statusText: statusText,
+            visibility: visibility
+        })
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
+        if (result) {
+            addConfiguredTagsAndUrlToDraft(result);
+            app.displaySuccessMessage("published quote")
+        } else {
+            context.fail()
+            app.displayErrorMessage("quoting post failed, check Action Log for details")
+        }
+        return result
+    } else {
+        // post is not in limits, show character limit and abort publish
+        if (!isPostEmpty(quoteText)) {
+            Draftodon_showCharacterLimit()
+            context.fail()
+        } else {
+            app.displayWarningMessage("Quote text is empty")
+            context.fail("Quote text is empty")
+        }
+        return undefined
+    }
+}
 
 // helper functions (no drafts actions)
 
@@ -1133,7 +1201,7 @@ function mastodon_publishThread({
                         //                        scheduledAt: (scheduleTime ? scheduledTime.toISOString() : null)
                     })
                     result = mastodon_postStatusUpdate(statusUpdate, mastodon)
-                    if(count == 1){
+                    if (count == 1) {
                         firstStatusOfThread = result
                     }
                     retryCount++
@@ -1606,10 +1674,10 @@ function addConfiguredTagsAndUrlToDraft(postResult = undefined) {
             draft.addTag(tag)
         }
     }
-    if(postResult.url){
+    if (postResult.url) {
         //alert(postResult.url)
         draft.append("[public url](" + postResult.url + ")", "\n\n")
-    } 
+    }
     draft.update()
 }
 
