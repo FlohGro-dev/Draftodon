@@ -74,7 +74,7 @@ This Action is helpful if you compose a longer post and you are not sure if it w
 
 This Action will do excatly what its name implies. it will post the contents of the draft to mastodon. Therefore it will use the configured mastodon instance in "Draftodon Settings".
 
-The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
 
 If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
@@ -85,7 +85,7 @@ If you run this the first time, you will need to authenticate Drafts for your ac
 This Action will schedule the current draft as prompt to mastodon. It will present a prompt where you can set the date and time when it should be published, when you select a date the draft will be sent to mastodon and schedule it for publishing.
 If you want to chack your scheduled posts you can use the "show scheduled posts" Action.
 
-The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
 
 If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
@@ -106,7 +106,7 @@ option 3
 
 The Action will present a prompt to show you the created poll and you can make adjustments to the default settings like changing the expire date, allowing multiple answers or hiding the totals in the poll.
 
-The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
 
 If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
@@ -127,7 +127,7 @@ option 3
 
 The Action will present a prompt to show you the created poll and you can make adjustments to the default settings like changing the expire date, allowing multiple answers or hiding the totals in the poll.
 
-The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
 
 If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
@@ -146,7 +146,7 @@ which will be hidden behind the content warning
 
 If the draft only consist of one line, the Action will consider the text as the text that shall be hidden and will ask for the spoiler text in a prompt.
 
-The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
 
 If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
@@ -165,7 +165,7 @@ which will be hidden behind the content warning
 
 If the draft only consist of one line, the Action will consider the text as the text that shall be hidden and will ask for the spoiler text in a prompt.
 
-The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
 
 If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
@@ -175,7 +175,17 @@ If you run this the first time, you will need to authenticate Drafts for your ac
 
 This Action lets you reply to a status. To reply to a status just copy the link of it and paste it into the first line of a Draft. Then type your reply below the url. The Action will validate that it is a correct status url and post the reply.
 
-The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
+
+If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
+
+> After Success Setting: *Archive*
+
+## quote status
+
+This Action lets you quote a status. Since Mastodon does not (yet) support quoting posts this is a small workaround. To quote a status copy the link of it and paste it into the first line of a new Draft. Then type your quoting text (your comment on that post or whatever) below the url. The Action will validate that it is a correct status url and append the following text to your quote before publishing it: `"💬 @[account] [url]`
+
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
 
 If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 
@@ -202,7 +212,7 @@ The Action will:
 - publish the Thread on Mastodon if it is valid AND you select "continue" in the html preview
 	- the first post of the thread will be a public post, every subsequent post will be an unlisted reply - therefore it won't clutter up the public timelines of your followers, if they open the first post, they will see all subsequent replies.
 
-The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. If you want to use the Action with different visibilities, just duplicate it, then change the template tag e.g. to `private` and rename the Action for easier identification.
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
 
 If you run this the first time, you will need to authenticate Drafts for your account (only need to do this once).
 

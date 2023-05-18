@@ -225,13 +225,18 @@ class MastodonPollStatusUpdate {
 class MastodonStatusUpdateResult {
     constructor({
         id,
+        url = null,
         scheduledAt = null
     }) {
         this.id = id
+        this.url = url
         this.scheduledAt = scheduledAt
     }
     getId() {
         return this.id
+    }
+    getUrl() {
+        return this.url
     }
     getScheduledAt() {
         return this.scheduledAt
@@ -344,7 +349,7 @@ function Draftodon_publishDraftAsSinglePost(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published draft")
         } else {
             context.fail()
@@ -393,7 +398,7 @@ function Draftodon_scheduleDraftAsSinglePost(visibility = "public") {
             if (result) {
                 let scheduledAtStr = getScheduledAtAsReadableString(result.scheduledAt)
                 app.displaySuccessMessage("scheduled post for " + scheduledAtStr)
-                addConfiguredTagsToDraft();
+                addConfiguredTagsAndUrlToDraft(result);
             } else {
                 app.displayErrorMessage("scheduling post failed, check action log for details")
                 context.fail()
@@ -534,7 +539,7 @@ function Draftodon_publishDraftAsPoll(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published poll")
         } else {
             context.fail()
@@ -631,7 +636,7 @@ function Draftodon_scheduleDraftAsPoll(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             let scheduledAtStr = getScheduledAtAsReadableString(result.scheduledAt)
             app.displaySuccessMessage("scheduled poll for " + scheduledAtStr)
         } else {
@@ -706,7 +711,7 @@ function Draftodon_publishDraftWithContentWarning(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published draft with content warning")
         } else {
             context.fail()
@@ -792,7 +797,7 @@ function Draftodon_scheduleDraftWithContentWarning(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("scheduled draft with content warning")
         } else {
             context.fail()
@@ -963,7 +968,7 @@ function Draftodon_replyToPost(visibility = "public") {
         })
         let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
         if (result) {
-            addConfiguredTagsToDraft();
+            addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published reply")
         } else {
             context.fail()
@@ -972,7 +977,7 @@ function Draftodon_replyToPost(visibility = "public") {
         return result
     } else {
         // post is not in limits, show character limit and abort publish
-        if (!isPostEmpty(text)) {
+        if (!isPostEmpty(replyText)) {
             Draftodon_showCharacterLimit()
             context.fail()
         } else {
@@ -983,6 +988,74 @@ function Draftodon_replyToPost(visibility = "public") {
     }
 }
 
+// quote post (not officially supported right now, but will add emoji, mentions creator and adds a link to the origin post)
+function Draftodon_quotePost(visibility = "public") {
+    if (!Draftodon_readSettingsIntoVars()) {
+        return undefined
+    }
+    let mastodon = getMastodonObjectFromSettings()
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+    let text = removeCharacterLimitIndicatorFromText(editor.getText())
+    let lines = text.split("\n")
+    if (lines.length < 2) {
+        alert("the draft must have at least two lines. insert the url of the status you want to quote in the first line and type the text you want to post together with your quote in the following lines")
+        context.fail()
+        return undefined
+    }
+    const quoteStatusUrl = lines.shift()
+    const quoteText = lines.join("\n")
+
+    let status = mastodon_searchStatusFromUrl(quoteStatusUrl, mastodon)
+
+    if (!status) {
+        // no status was found
+        alert("no status was found for url \"" + quoteStatusUrl + "\". The url to the status you want to quote should be in the first line of the draft.")
+        context.fail()
+        return undefined
+    }
+
+    let account = status.account.acct
+    let textToAdd = "💬 @" + account + "\n" + quoteStatusUrl
+
+    let statusText = quoteText + "\n\n" + textToAdd;
+
+    if (isPostInLimits(statusText, 0)) {
+        if (isPostEmpty(quoteText)) {
+            // empty draft
+            app.displayWarningMessage("Quote text is empty")
+            context.fail("Quote text is empty")
+            return undefined
+        }
+        let statusUpdate = new MastodonTextStatusUpdate({
+            statusText: statusText,
+            visibility: visibility
+        })
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
+        if (result) {
+            addConfiguredTagsAndUrlToDraft(result);
+            app.displaySuccessMessage("published quote")
+        } else {
+            context.fail()
+            app.displayErrorMessage("quoting post failed, check Action Log for details")
+        }
+        return result
+    } else {
+        // post is not in limits, show character limit and abort publish
+        if (!isPostEmpty(quoteText)) {
+            Draftodon_showCharacterLimit()
+            context.fail()
+        } else {
+            app.displayWarningMessage("Quote text is empty")
+            context.fail("Quote text is empty")
+        }
+        return undefined
+    }
+}
 
 // helper functions (no drafts actions)
 
@@ -1110,6 +1183,7 @@ function mastodon_publishThread({
         if (continueSelected) {
             // publish thread
             let count = 1
+            let firstStatusOfThread;
             let inReplyToId = ""
             let success = true
             const maxRetries = 5;
@@ -1127,6 +1201,9 @@ function mastodon_publishThread({
                         //                        scheduledAt: (scheduleTime ? scheduledTime.toISOString() : null)
                     })
                     result = mastodon_postStatusUpdate(statusUpdate, mastodon)
+                    if (count == 1) {
+                        firstStatusOfThread = result
+                    }
                     retryCount++
                     if (retryCount >= maxRetries) {
                         success = false;
@@ -1139,7 +1216,7 @@ function mastodon_publishThread({
             }
             if (success) {
                 app.displaySuccessMessage("published thread")
-                addConfiguredTagsToDraft()
+                addConfiguredTagsAndUrlToDraft(firstStatusOfThread)
                 return true;
 
             } else {
@@ -1285,7 +1362,8 @@ function parseStatusUpdateResponse(data) {
         })
     } else {
         obj = new MastodonStatusUpdateResult({
-            id: data["id"]
+            id: data["id"],
+            url: data["url"]
         })
     }
     return obj
@@ -1587,7 +1665,7 @@ function createPostCountString(curPosition, length) {
     return "[" + curPosition + "/" + length + "]"
 }
 
-function addConfiguredTagsToDraft() {
+function addConfiguredTagsAndUrlToDraft(postResult = undefined) {
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
@@ -1595,8 +1673,12 @@ function addConfiguredTagsToDraft() {
         for (tag of DraftodonSettings.tagsToAddOnSuccess) {
             draft.addTag(tag)
         }
-        draft.update()
     }
+    if (postResult.url) {
+        //alert(postResult.url)
+        draft.append("[public url](" + postResult.url + ")", "\n\n")
+    }
+    draft.update()
 }
 
 function getScheduledAtAsReadableString(scheduledDate) {
