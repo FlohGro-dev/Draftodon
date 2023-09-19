@@ -1521,7 +1521,7 @@ function mastodon_getBookmarks(mastodon = getMastodonObjectFromSettings()) {
         console.log("Request Succeeded: " + response.responseText)
         let data = response.responseData
 
-        data.sort((a,b) => {
+        data.sort((a, b) => {
             const dateA = new Date(a["created_at"])
             const dateB = new Date(b["created_at"])
             return dateB - dateA
