@@ -1189,7 +1189,13 @@ function Draftodon_quotePost(visibility = "public") {
     }
 }
 
-function Draftodon_importBookmark(hideOption = "false") {
+function Draftodon_importStatus(importSource, hideOption){
+    // validate importSource
+    const allowedImportSources = ["bookmarks","favorites","home"]
+    if(!allowedImportSources.includes(importSource)){
+        alert("Draftodon_importStatus() used with unsupported value for \"importSource\". Valid values are:\n" + allowedImportSources.map(item => `- ${item}`).join("\n"))
+        return undefined
+    }
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
@@ -1201,29 +1207,35 @@ function Draftodon_importBookmark(hideOption = "false") {
         return undefined
     }
 
-    let getBookmarksResult = mastodon_getBookmarks(mastodon)
+    let getStatusesResult = []
+    let msgSourceIdentifierStr = ""
+    // evalidate importSource
+    switch(importSource){
+        case "bookmarks": getStatusesResult = mastodon_getBookmarks(mastodon); msgSourceIdentifierStr = "bookmark"; break;
+        case "favorites": getStatusesResult = mastodon_getFavorites(mastodon); msgSourceIdentifierStr = "favorite"; break;
+        case "home": getStatusesResult = mastodon_getHome(mastodon); msgSourceIdentifierStr = "post"; break;
+    }
 
-    if (getBookmarksResult.length == 0) {
+    if (getStatusesResult.length == 0) {
         // no scheduled posts
-        app.displayInfoMessage("no bookmarks found")
+        app.displayInfoMessage("no " + msgSourceIdentifierStr + "s found")
         context.cancel()
         return undefined
     }
 
     if(hideOption == "true"){
         // remove all already imported bookmarks from the array
-        for(let i = 0; i < getBookmarksResult.length; i++){
+        for(let i = 0; i < getStatusesResult.length; i++){
             // check if that bookmark is already imported
-            let curBookMark = getBookmarksResult[i]
+            let curBookMark = getStatusesResult[i]
             let text = "# " + curBookMark.toString()
             let splits = text.split("\n")
             splits.splice(1, 0, "");
             let foundDrafts = Draft.queryByTitle(splits[0])
-            //let foundDrafts = Draft.query(content, "all", [], [], "modified", true, true)
             if (foundDrafts.length >= 1) {
-                // bookmark already imported
+                // status already imported
                 // remove it from the array
-                getBookmarksResult.splice(i, 1);
+                getStatusesResult.splice(i, 1);
                 i--; // Decrement i to account for the removed element
             } 
         }
@@ -1231,7 +1243,7 @@ function Draftodon_importBookmark(hideOption = "false") {
 
     let html = createHtml({
         "type": "multiple_posts",
-        "posts": getBookmarksResult,
+        "posts": getStatusesResult,
         "publishIntended": false,
         "importIntended": true
     })
@@ -1240,85 +1252,29 @@ function Draftodon_importBookmark(hideOption = "false") {
     // read vars
     let selectedIndex = context.previewValues["postToImport"];
     if (selectedIndex) {
-        let bookmarkToImport = getBookmarksResult[selectedIndex - 1]
-        let theD = bookmarkToImport.toDraft()
+        let statusToImport = getStatusesResult[selectedIndex - 1]
+        let theD = statusToImport.toDraft()
 
         if(theD.uuid != draft.uuid){
             editor.load(theD)
+            return true
         }
     } else {
-        app.displayInfoMessage("no bookmark selected")
+        app.displayInfoMessage("no " + msgSourceIdentifierStr + " selected")
+        return true
     }
+}
 
-
-
-
+function Draftodon_importBookmark(hideOption = "false") {
+    return Draftodon_importStatus("bookmarks",hideOption)
 }
 
 function Draftodon_importFavorite(hideOption = "false") {
-    if (!Draftodon_readSettingsIntoVars()) {
-        return undefined
-    }
-    let mastodon = getMastodonObjectFromSettings()
-    if (!mastodon) {
-        console.log("no account was returned")
-        app.displayInfoMessage("no account selected")
-        context.cancel("cancelling since no account was selected")
-        return undefined
-    }
+    return Draftodon_importStatus("favorites",hideOption)
+}
 
-    let getFavoritesResult = mastodon_getFavorites(mastodon)
-
-    if (getFavoritesResult.length == 0) {
-        // no scheduled posts
-        app.displayInfoMessage("no favorites found")
-        context.cancel()
-        return undefined
-    }
-
-    if(hideOption == "true"){
-        // remove all already imported bookmarks from the array
-        for(let i = 0; i < getFavoritesResult.length; i++){
-            // check if that bookmark is already imported
-            let curBookMark = getFavoritesResult[i]
-            let text = "# " + curBookMark.toString()
-            let splits = text.split("\n")
-            splits.splice(1, 0, "");
-            let foundDrafts = Draft.queryByTitle(splits[0])
-            //let foundDrafts = Draft.query(content, "all", [], [], "modified", true, true)
-            if (foundDrafts.length >= 1) {
-                // bookmark already imported
-                // remove it from the array
-                getFavoritesResult.splice(i, 1);
-                i--; // Decrement i to account for the removed element
-            } 
-        }
-    }
-
-    let html = createHtml({
-        "type": "multiple_posts",
-        "posts": getFavoritesResult,
-        "publishIntended": false,
-        "importIntended": true
-    })
-    previewHtml(html)
-
-    // read vars
-    let selectedIndex = context.previewValues["postToImport"];
-    if (selectedIndex) {
-        let favoriteToImport = getFavoritesResult[selectedIndex - 1]
-        let theD = favoriteToImport.toDraft()
-
-        if(theD.uuid != draft.uuid){
-            editor.load(theD)
-        }
-    } else {
-        app.displayInfoMessage("no favorite selected")
-    }
-
-
-
-
+function Draftodon_importFromHomeTimeline(hideOption = "false") {
+    return Draftodon_importStatus("home",hideOption)
 }
 
 // helper functions (no drafts actions)
@@ -1632,6 +1588,45 @@ function mastodon_getFavorites(mastodon = getMastodonObjectFromSettings()) {
     // get scheduled statuses from API
     let response = mastodon.request({
         "path": MastodonEndpoints.FAVORITES,
+        "method": "GET"
+    })
+
+    if (!response.success) {
+        if (response.statusCode == 999) {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            alert("Request Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            context.fail()
+            return undefined
+        } else {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            context.fail()
+            return undefined
+        }
+    } else {
+        console.log("Request Succeeded: " + response.responseText)
+        let data = response.responseData
+
+        data.sort((a, b) => {
+            const dateA = new Date(a["created_at"])
+            const dateB = new Date(b["created_at"])
+            return dateB - dateA
+        })
+
+        return parseGetBookmarksStatusesResponse(data)
+    }
+}
+
+function mastodon_getHome(mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+
+    // get scheduled statuses from API
+    let response = mastodon.request({
+        "path": MastodonEndpoints.HOME,
         "method": "GET"
     })
 
