@@ -1188,7 +1188,7 @@ function Draftodon_quotePost(visibility = "public") {
     }
 }
 
-function Draftodon_importBookmark(hideOption) {
+function Draftodon_importBookmark(hideOption = "false") {
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
