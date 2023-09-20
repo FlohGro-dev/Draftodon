@@ -1188,7 +1188,7 @@ function Draftodon_quotePost(visibility = "public") {
     }
 }
 
-function Draftodon_importBookmark() {
+function Draftodon_importBookmark(hideOption) {
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
@@ -1209,6 +1209,25 @@ function Draftodon_importBookmark() {
         return undefined
     }
 
+    if(hideOption == "true"){
+        // remove all already imported bookmarks from the array
+        for(let i = 0; i < getBookmarksResult.length; i++){
+            // check if that bookmark is already imported
+            let curBookMark = getBookmarksResult[i]
+            let text = "# " + curBookMark.toString()
+            let splits = text.split("\n")
+            splits.splice(1, 0, "");
+            let foundDrafts = Draft.queryByTitle(splits[0])
+            //let foundDrafts = Draft.query(content, "all", [], [], "modified", true, true)
+            if (foundDrafts.length >= 1) {
+                // bookmark already imported
+                // remove it from the array
+                getBookmarksResult.splice(i, 1);
+                i--; // Decrement i to account for the removed element
+            } 
+        }
+    }
+
     let html = createHtml({
         "type": "multiple_posts",
         "posts": getBookmarksResult,
@@ -1224,7 +1243,6 @@ function Draftodon_importBookmark() {
         let theD = bookmarkToImport.toDraft()
 
         if(theD.uuid != draft.uuid){
-            alert(theD.title + "\n" + theD.uuid + "\n\n" + draft.title + "\n" + draft.uuid)
             editor.load(theD)
         }
     } else {
