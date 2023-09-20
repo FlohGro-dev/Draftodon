@@ -1222,7 +1222,11 @@ function Draftodon_importBookmark() {
     if (selectedIndex) {
         let bookmarkToImport = getBookmarksResult[selectedIndex - 1]
         let theD = bookmarkToImport.toDraft()
-        editor.load(theD)
+
+        if(theD.uuid != draft.uuid){
+            alert(theD.title + "\n" + theD.uuid + "\n\n" + draft.title + "\n" + draft.uuid)
+            editor.load(theD)
+        }
     } else {
         app.displayInfoMessage("no bookmark selected")
     }
