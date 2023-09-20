@@ -19,7 +19,8 @@ const MastodonEndpoints = {
     "SERVER_INFO": "/api/v2/instance",
     "WEEKLY_ACTIVITY": "/api/v1/instance/activity",
     "SEARCH": "/api/v2/search",
-    "BOOKMARKS": "/api/v1/bookmarks"
+    "BOOKMARKS": "/api/v1/bookmarks",
+    "FAVORITES": "/api/v1/favourites"
 }
 let DraftodonSettings = {
     "mastodonInstances": [],
@@ -1254,6 +1255,72 @@ function Draftodon_importBookmark(hideOption = "false") {
 
 }
 
+function Draftodon_importFavorite(hideOption = "false") {
+    if (!Draftodon_readSettingsIntoVars()) {
+        return undefined
+    }
+    let mastodon = getMastodonObjectFromSettings()
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+
+    let getFavoritesResult = mastodon_getFavorites(mastodon)
+
+    if (getFavoritesResult.length == 0) {
+        // no scheduled posts
+        app.displayInfoMessage("no favorites found")
+        context.cancel()
+        return undefined
+    }
+
+    if(hideOption == "true"){
+        // remove all already imported bookmarks from the array
+        for(let i = 0; i < getFavoritesResult.length; i++){
+            // check if that bookmark is already imported
+            let curBookMark = getFavoritesResult[i]
+            let text = "# " + curBookMark.toString()
+            let splits = text.split("\n")
+            splits.splice(1, 0, "");
+            let foundDrafts = Draft.queryByTitle(splits[0])
+            //let foundDrafts = Draft.query(content, "all", [], [], "modified", true, true)
+            if (foundDrafts.length >= 1) {
+                // bookmark already imported
+                // remove it from the array
+                getFavoritesResult.splice(i, 1);
+                i--; // Decrement i to account for the removed element
+            } 
+        }
+    }
+
+    let html = createHtml({
+        "type": "multiple_posts",
+        "posts": getFavoritesResult,
+        "publishIntended": false,
+        "importIntended": true
+    })
+    previewHtml(html)
+
+    // read vars
+    let selectedIndex = context.previewValues["postToImport"];
+    if (selectedIndex) {
+        let favoriteToImport = getFavoritesResult[selectedIndex - 1]
+        let theD = favoriteToImport.toDraft()
+
+        if(theD.uuid != draft.uuid){
+            editor.load(theD)
+        }
+    } else {
+        app.displayInfoMessage("no favorite selected")
+    }
+
+
+
+
+}
+
 // helper functions (no drafts actions)
 
 // post publishing
@@ -1551,6 +1618,45 @@ function mastodon_getBookmarks(mastodon = getMastodonObjectFromSettings()) {
 
         return parseGetBookmarksStatusesResponse(data)
         //	console.log(`Posted to Mastodon: ${response.responseData["url"]}`)
+    }
+}
+
+function mastodon_getFavorites(mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+
+    // get scheduled statuses from API
+    let response = mastodon.request({
+        "path": MastodonEndpoints.FAVORITES,
+        "method": "GET"
+    })
+
+    if (!response.success) {
+        if (response.statusCode == 999) {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            alert("Request Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            context.fail()
+            return undefined
+        } else {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            context.fail()
+            return undefined
+        }
+    } else {
+        console.log("Request Succeeded: " + response.responseText)
+        let data = response.responseData
+
+        data.sort((a, b) => {
+            const dateA = new Date(a["created_at"])
+            const dateB = new Date(b["created_at"])
+            return dateB - dateA
+        })
+
+        return parseGetBookmarksStatusesResponse(data)
     }
 }
 
