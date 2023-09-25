@@ -1370,7 +1370,7 @@ function mastodon_postStatusUpdate(statusUpdate, mastodon = getMastodonObjectFro
     if (!response.success) {
         if (response.statusCode == 999) {
             console.log("Post Failed: " + response.statusCode + ", " + response.error)
-            alert("Post Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            alert("Post Failed, returned error:\n\""+ response.error +"\"\n\nMaybe Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
             context.fail()
             return undefined
         } else {
@@ -2157,7 +2157,9 @@ function addConfiguredTagsAndUrlToDraft(postResult = undefined, draftToUse = dra
         //alert(postResult.url)
         draftToUse.append("[public url](" + postResult.url + ")", "\n\n")
     }
+    draftToUse.isArchived = true;
     draftToUse.update()
+    editor.load(draftToUse)
 }
 
 function getScheduledAtAsReadableString(scheduledDate) {
