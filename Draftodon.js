@@ -440,6 +440,67 @@ function Draftodon_showCharacterLimit() {
     }
 }
 
+function Draftodon_postStatusFromPrompt(visibility = "public") {
+    if (!Draftodon_readSettingsIntoVars()) {
+        return undefined
+    }
+
+    if (!isValidVisibility(visibility)) {
+        return undefined
+    }
+
+    let p = new Prompt()
+    p.title = "insert text for post"
+    p.addTextView("postText", "", "", {
+        wantsFocus: true
+    })
+    p.addButton("post status")
+    if (!p.show()) {
+        // user cancelled
+        return undefined
+    }
+    // user tapped post status button since prompt was not cancelled
+    let text = p.fieldValues["postText"]
+    let mastodon = getMastodonObjectFromSettings()
+    if (isPostInLimits(text, 0)) {
+        if (isPostEmpty(text)) {
+            // empty draft
+            app.displayWarningMessage("Text is empty")
+            context.fail("Text is empty")
+            return undefined
+        }
+
+        let d = new Draft()
+        d.content = text
+
+        // valid post, publish it
+        let statusUpdate = new MastodonTextStatusUpdate({
+            statusText: text,
+            visibility: visibility
+        })
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
+        if (result) {
+            addConfiguredTagsAndUrlToDraft(result, d);
+            app.displaySuccessMessage("published post")
+        } else {
+            context.fail()
+            app.displayErrorMessage("publishing text failed, try again")
+        }
+        return result
+    } else {
+        // post is not in limits, show character limit and abort publish
+        if (!isPostEmpty(text)) {
+            app.displayErrorMessage("post exceeds character limit")
+            Draftodon_showCharacterLimit()
+            context.fail()
+        } else {
+            app.displayWarningMessage("text is empty")
+            context.fail("text is empty")
+        }
+        return undefined
+    }
+}
+
 // post draft as single post
 function Draftodon_publishDraftAsSinglePost(visibility = "public") {
     if (!Draftodon_readSettingsIntoVars()) {
@@ -1189,10 +1250,10 @@ function Draftodon_quotePost(visibility = "public") {
     }
 }
 
-function Draftodon_importStatus(importSource, hideOption){
+function Draftodon_importStatus(importSource, hideOption) {
     // validate importSource
-    const allowedImportSources = ["bookmarks","favorites","home"]
-    if(!allowedImportSources.includes(importSource)){
+    const allowedImportSources = ["bookmarks", "favorites", "home"]
+    if (!allowedImportSources.includes(importSource)) {
         alert("Draftodon_importStatus() used with unsupported value for \"importSource\". Valid values are:\n" + allowedImportSources.map(item => `- ${item}`).join("\n"))
         return undefined
     }
@@ -1210,10 +1271,19 @@ function Draftodon_importStatus(importSource, hideOption){
     let getStatusesResult = []
     let msgSourceIdentifierStr = ""
     // evalidate importSource
-    switch(importSource){
-        case "bookmarks": getStatusesResult = mastodon_getBookmarks(mastodon); msgSourceIdentifierStr = "bookmark"; break;
-        case "favorites": getStatusesResult = mastodon_getFavorites(mastodon); msgSourceIdentifierStr = "favorite"; break;
-        case "home": getStatusesResult = mastodon_getHome(mastodon); msgSourceIdentifierStr = "post"; break;
+    switch (importSource) {
+        case "bookmarks":
+            getStatusesResult = mastodon_getBookmarks(mastodon);
+            msgSourceIdentifierStr = "bookmark";
+            break;
+        case "favorites":
+            getStatusesResult = mastodon_getFavorites(mastodon);
+            msgSourceIdentifierStr = "favorite";
+            break;
+        case "home":
+            getStatusesResult = mastodon_getHome(mastodon);
+            msgSourceIdentifierStr = "post";
+            break;
     }
 
     if (getStatusesResult.length == 0) {
@@ -1223,9 +1293,9 @@ function Draftodon_importStatus(importSource, hideOption){
         return undefined
     }
 
-    if(hideOption == "true"){
+    if (hideOption == "true") {
         // remove all already imported bookmarks from the array
-        for(let i = 0; i < getStatusesResult.length; i++){
+        for (let i = 0; i < getStatusesResult.length; i++) {
             // check if that bookmark is already imported
             let curBookMark = getStatusesResult[i]
             let text = "# " + curBookMark.toString()
@@ -1237,7 +1307,7 @@ function Draftodon_importStatus(importSource, hideOption){
                 // remove it from the array
                 getStatusesResult.splice(i, 1);
                 i--; // Decrement i to account for the removed element
-            } 
+            }
         }
     }
 
@@ -1255,7 +1325,7 @@ function Draftodon_importStatus(importSource, hideOption){
         let statusToImport = getStatusesResult[selectedIndex - 1]
         let theD = statusToImport.toDraft()
 
-        if(theD.uuid != draft.uuid){
+        if (theD.uuid != draft.uuid) {
             editor.load(theD)
             return true
         }
@@ -1266,15 +1336,15 @@ function Draftodon_importStatus(importSource, hideOption){
 }
 
 function Draftodon_importBookmark(hideOption = "false") {
-    return Draftodon_importStatus("bookmarks",hideOption)
+    return Draftodon_importStatus("bookmarks", hideOption)
 }
 
 function Draftodon_importFavorite(hideOption = "false") {
-    return Draftodon_importStatus("favorites",hideOption)
+    return Draftodon_importStatus("favorites", hideOption)
 }
 
 function Draftodon_importFromHomeTimeline(hideOption = "false") {
-    return Draftodon_importStatus("home",hideOption)
+    return Draftodon_importStatus("home", hideOption)
 }
 
 // helper functions (no drafts actions)
@@ -2074,20 +2144,20 @@ function createPostCountString(curPosition, length) {
     return "[" + curPosition + "/" + length + "]"
 }
 
-function addConfiguredTagsAndUrlToDraft(postResult = undefined) {
+function addConfiguredTagsAndUrlToDraft(postResult = undefined, draftToUse = draft) {
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
     if (DraftodonSettings.tagsToAddOnSuccess.length > 0) {
         for (tag of DraftodonSettings.tagsToAddOnSuccess) {
-            draft.addTag(tag)
+            draftToUse.addTag(tag)
         }
     }
     if (postResult.url) {
         //alert(postResult.url)
-        draft.append("[public url](" + postResult.url + ")", "\n\n")
+        draftToUse.append("[public url](" + postResult.url + ")", "\n\n")
     }
-    draft.update()
+    draftToUse.update()
 }
 
 function getScheduledAtAsReadableString(scheduledDate) {
