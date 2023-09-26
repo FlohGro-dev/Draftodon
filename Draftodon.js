@@ -20,7 +20,8 @@ const MastodonEndpoints = {
     "WEEKLY_ACTIVITY": "/api/v1/instance/activity",
     "SEARCH": "/api/v2/search",
     "BOOKMARKS": "/api/v1/bookmarks",
-    "FAVORITES": "/api/v1/favourites"
+    "FAVORITES": "/api/v1/favourites",
+    "VERIFY": "/api/v1/accounts/verify_credentials"
 }
 let DraftodonSettings = {
     "mastodonInstances": [],
@@ -1346,6 +1347,38 @@ function Draftodon_importFavorite(hideOption = "false") {
 function Draftodon_importFromHomeTimeline(hideOption = "false") {
     return Draftodon_importStatus("home", hideOption)
 }
+/* testing purpose only - not working currently
+function Draftodon_importBoost(hideOption = "false"){
+    // /api/v1/accounts/:id/statuses
+    // /api/v1/accounts/lookup
+    // verify /api/v1/accounts/verify_credentials
+
+    
+    if (!Draftodon_readSettingsIntoVars()) {
+        return undefined
+    }
+    let mastodon = getMastodonObjectFromSettings()
+
+    let accountId = mastodon_getAccountId(mastodon)
+
+    if(!accountId){
+        return undefined
+    }
+
+    let accountStatuses = mastodon_getStatusesOfAccount(accountId, mastodon)
+    if(!accountStatuses){
+        return undefined
+    }
+    for(let status of accountStatuses){
+        if(status.reblogged){
+            //alert(JSON.stringify(status))
+            //let a = b
+        }
+    }
+    let reblogs = accountStatuses.filter((status) => status.reblogged)
+    alert(JSON.stringify(reblogs))
+}
+*/
 
 // helper functions (no drafts actions)
 
@@ -1722,6 +1755,75 @@ function mastodon_getHome(mastodon = getMastodonObjectFromSettings()) {
         })
 
         return parseGetBookmarksStatusesResponse(data)
+    }
+}
+
+
+function mastodon_getAccountId(mastodon = getMastodonObjectFromSettings()){
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+    
+    let response = mastodon.request({
+        "path": MastodonEndpoints.VERIFY,
+        "method": "GET"
+    })
+
+
+    if (!response.success) {
+        if (response.statusCode == 999) {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            alert("Request Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            context.fail()
+            return undefined
+        } else {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            context.fail()
+            return undefined
+        }
+    } else {
+        console.log("Request Succeeded: " + response.responseText)
+        let data = response.responseData
+        return data.id
+    }
+}
+
+// can only return 40 statuses as per API docs: https://docs.joinmastodon.org/methods/accounts/#statuses
+function mastodon_getStatusesOfAccount(accountId, mastodon){
+    if (!mastodon) {
+        console.log("no account was given")
+        app.displayInfoMessage("no account given")
+        context.cancel("cancelling since no account was given")
+        return undefined
+    }
+    
+    let path = "/api/v1/accounts/" + accountId + "/statuses"
+    let response = mastodon.request({
+        "path": path,
+        "method": "GET",
+        "parameters": {
+            "limit": 40
+        }
+    })
+
+    if (!response.success) {
+        if (response.statusCode == 999) {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            alert("Request Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            context.fail()
+            return undefined
+        } else {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            context.fail()
+            return undefined
+        }
+    } else {
+        console.log("Request Succeeded: " + response.responseText)
+        let data = response.responseData
+        return data
     }
 }
 
