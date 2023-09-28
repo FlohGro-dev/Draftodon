@@ -55,24 +55,34 @@ You can find the official documentation of the visibilities in the [Mastodon API
 
 ## Draftodon with multiple accounts
 
-To use Draftodon with multiple accounts you just need to configure every instance and handle that you might want to use.
+To use Draftodon with multiple accounts you just need to configure every instance, handle and the corresponding character limit that you might want to use.
 I tried to keep this as simple as possible and with no interruption for users with just one accout.
 
-To configure multiple accounts you need to add every instance and the corresponding handle to a new line in the `Define Template Tag` steps in the action.
-Lets assume I have two accounts that I want to use with Draftodon. The first account is `@FlohGro@social.lol` and the second one would be `@secoundAccount@mastodon.social`.
+To configure multiple accounts you need to add every instance, handle and character limit to a new line in the `Define Template Tag` steps in the `Draftodon Settings` action.
+Lets assume I have two accounts that I want to use with Draftodon. The first account is `@FlohGro@social.lol` and the second one would be `@secoundAccount@mastodon.social`. For this example we assume that social.lol has a character limit of 500 and mastodon.social limits posts to 600 characters.
 
 I have to set the `mastodon_instance` template tag as:
-```
+
+```text
 social.lol
 mastodon.social
 ```
+
 The `mastodon_handle` template tag must be configured accordingly to:
-```
+
+```text
 @FlohGro
 @secondAccount
 ```
 
-Each new account has to be in a separate line and the order is important. As you can see in the example `@FlohGro` and `social.lol` are in the first line and `@secondAccount` and `mastodon.social` are in the second line of the corresponding template tag.
+To round it up the `character_limits` template tag should look like this:
+
+```text
+500
+600
+```
+
+Each new account has to be in a separate line and the order is important. As you can see in the example `@FlohGro`, `social.lol` and `500` are in the first line, whereas `@secondAccount`, `mastodon.social` and `600` are in the second line of the corresponding template tags.
 If you mix up the order, this will not work.
 
 When you configured multiple accounts in the settings each time you want to publish something to Mastodon, the Action will display a prompt and ask you to pick the account that should publish the post.
