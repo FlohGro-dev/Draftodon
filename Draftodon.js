@@ -1403,7 +1403,7 @@ function mastodon_postStatusUpdate(statusUpdate, mastodon = getMastodonObjectFro
     if (!response.success) {
         if (response.statusCode == 999) {
             console.log("Post Failed: " + response.statusCode + ", " + response.error)
-            alert("Post Failed, returned error:\n\""+ response.error +"\"\n\nMaybe Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            alert("Post Failed, returned error:\n\"" + response.error + "\"\n\nMaybe Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
             context.fail()
             return undefined
         } else {
@@ -1759,14 +1759,14 @@ function mastodon_getHome(mastodon = getMastodonObjectFromSettings()) {
 }
 
 
-function mastodon_getAccountId(mastodon = getMastodonObjectFromSettings()){
+function mastodon_getAccountId(mastodon = getMastodonObjectFromSettings()) {
     if (!mastodon) {
         console.log("no account was returned")
         app.displayInfoMessage("no account selected")
         context.cancel("cancelling since no account was selected")
         return undefined
     }
-    
+
     let response = mastodon.request({
         "path": MastodonEndpoints.VERIFY,
         "method": "GET"
@@ -1792,14 +1792,14 @@ function mastodon_getAccountId(mastodon = getMastodonObjectFromSettings()){
 }
 
 // can only return 40 statuses as per API docs: https://docs.joinmastodon.org/methods/accounts/#statuses
-function mastodon_getStatusesOfAccount(accountId, mastodon){
+function mastodon_getStatusesOfAccount(accountId, mastodon) {
     if (!mastodon) {
         console.log("no account was given")
         app.displayInfoMessage("no account given")
         context.cancel("cancelling since no account was given")
         return undefined
     }
-    
+
     let path = "/api/v1/accounts/" + accountId + "/statuses"
     let response = mastodon.request({
         "path": path,
@@ -2140,7 +2140,7 @@ function getPostAsHtml({
         if (!count == 1 && postAmount == 1) {
             html.push(postsCountString(count, postAmount));
         }
-        if (!importIntended){
+        if (!importIntended) {
             html.push("</p>");
         }
     } else {
