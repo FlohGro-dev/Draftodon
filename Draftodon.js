@@ -18,11 +18,15 @@ const MastodonEndpoints = {
     "HOME": "/api/v1/timelines/home",
     "SERVER_INFO": "/api/v2/instance",
     "WEEKLY_ACTIVITY": "/api/v1/instance/activity",
-    "SEARCH": "/api/v2/search"
+    "SEARCH": "/api/v2/search",
+    "BOOKMARKS": "/api/v1/bookmarks",
+    "FAVORITES": "/api/v1/favourites",
+    "VERIFY": "/api/v1/accounts/verify_credentials"
 }
 let DraftodonSettings = {
     "mastodonInstances": [],
     "mastodonHandles": [],
+    "characterLimits": [],
     "characterLimit": 0,
     "characterLimitIndicator": "",
     "threadDivider": "",
@@ -264,7 +268,7 @@ class MastodonScheduledStatus {
         this.sensitive = sensitive
     }
     toString() {
-        return (this.isPoll ? "Poll: " : "") + "\"" + this.statusText + "\"\nscheduled at: " + this.scheduledAt + "\n" + (this.visibility != "public" ? "visibility: " + this.visibility : "")
+        return (this.isPoll ? "Poll: " : "") + "\"" + this.statusText + "\"\n\nscheduled at: " + this.scheduledAt + "\n" + (this.visibility != "public" ? "visibility: " + this.visibility : "")
     }
     toHtmlString() {
         let str = []
@@ -300,12 +304,126 @@ class MastodonScheduledStatus {
 
 }
 
+class MastodonBookmarkedStatus {
+    constructor({
+        statusText,
+        isPoll = false,
+        pollOptions = [],
+        visibility = "public",
+        created_at,
+        id,
+        spoilerText = null,
+        sensitive = null,
+        url,
+        account,
+    }) {
+        this.statusText = statusText
+        this.isPoll = isPoll
+        this.pollOptions = pollOptions
+        this.visibility = visibility
+        this.created_at = created_at
+        this.id = id
+        this.spoilerText = spoilerText
+        this.sensitive = sensitive
+        this.url = url
+        this.account = account
+    }
+    toString() {
+        let str = []
+
+        let dateTimeSplits = this.created_at.split("T")
+        let date = dateTimeSplits[0]
+        let timeSplits = dateTimeSplits[1].split(":")
+        let time = timeSplits[0] + ":" + timeSplits[1]
+        let createdAtStr = date + " at " + time + " (UTC)"
+
+        str.push(this.account["display_name"] + " on " + createdAtStr)
+
+
+        if (this.sensitive) {
+            str.push("*spoiler:* " + this.spoilerText)
+        }
+        if (this.isPoll) {
+            str.push("*poll:* " + this.statusText)
+            this.pollOptions.forEach(function (option) {
+                str.push("- " + option + "\n")
+            })
+        } else {
+            str.push(this.statusText)
+        }
+
+        str.push("")
+        str.push("---")
+        str.push("[public url](" + this.url + ")")
+        str.push("[" + this.account["acct"] + "](" + this.account["url"] + ")")
+
+        return str.join("\n")
+    }
+    toHtmlString() {
+        let str = []
+        let dateTimeSplits = this.created_at.split("T")
+        let date = dateTimeSplits[0]
+        let timeSplits = dateTimeSplits[1].split(":")
+        let time = timeSplits[0] + ":" + timeSplits[1]
+        let createdAtStr = date + " at " + time + " (UTC)"
+        str.push("<span class='info'>" + "<em>created at: </em>" + createdAtStr + "</span></br> ");
+        str.push("<br>")
+        if (this.isPoll) {
+            str.push("<em>poll:</em><br>")
+        }
+        if (this.sensitive) {
+            let strToAdd = "<em>sensitive:"
+            if (this.spoilerText) {
+                strToAdd = strToAdd + " \"" + this.spoilerText + "\"</em><br>"
+            } else {
+                strToAdd = strToAdd + "</em><br>"
+            }
+            str.push(strToAdd)
+        }
+        str.push("<strong>" + htmlSafe(this.account["display_name"] + ":") + "</strong> (<a href=\"" + this.account["url"] + "\">" + this.account["acct"] + "</a>)<br>")
+        str.push(htmlSafe(this.statusText))
+        if (this.isPoll) {
+            this.pollOptions.forEach(function (option) {
+                str.push(htmlSafe("- " + option + "\n"))
+            })
+        }
+        str.push("<br>")
+
+        return str.join("\n")
+    }
+    toDraft() {
+        let text = "# " + this.toString()
+        let splits = text.split("\n")
+        splits.splice(1, 0, "");
+        let content = splits.join("\n")
+        // before we create a new draft we will check if the bookmark was already imported
+        // this only works for unmodified imports!
+        let foundDrafts = Draft.queryByTitle(splits[0])
+        //let foundDrafts = Draft.query(content, "all", [], [], "modified", true, true)
+        if (foundDrafts.length == 1) {
+            app.displayInfoMessage("bookmark already imported")
+            return foundDrafts[0]
+        } else if (foundDrafts.length > 1) {
+            // exists several times - display warning and return first (should not happend normally)
+            app.displayWarningMessage("bookmark imported exists multiple times, loading the first.. (clean that up)")
+            return foundDrafts[0]
+        } else {
+            let d = new Draft()
+            d.content = content
+            d.update()
+            return d
+        }
+    }
+}
+
 
 // functions for Drafts Actions of the Action Group
 
 // adds [[character_limit_indicator]] into draft where it exceeds the configured limits
 function Draftodon_showCharacterLimit() {
     Draftodon_readSettingsIntoVars();
+    // we need to check the character limit for the instances
+    let characterLimit = getCharacterLimitFromInstance()
 
     //remove indicator, in case it was called before
     editor.setText(removeCharacterLimitIndicatorFromText(editor.getText()))
@@ -323,6 +441,67 @@ function Draftodon_showCharacterLimit() {
     }
 }
 
+function Draftodon_postStatusFromPrompt(visibility = "public") {
+    if (!Draftodon_readSettingsIntoVars()) {
+        return undefined
+    }
+
+    if (!isValidVisibility(visibility)) {
+        return undefined
+    }
+
+    let p = new Prompt()
+    p.title = "insert status text"
+    p.addTextView("postText", "", "", {
+        wantsFocus: true
+    })
+    p.addButton("post status")
+    if (!p.show()) {
+        // user cancelled
+        return undefined
+    }
+    // user tapped post status button since prompt was not cancelled
+    let text = p.fieldValues["postText"]
+    let mastodon = getMastodonObjectFromSettings()
+    if (isPostInLimits(text, 0)) {
+        if (isPostEmpty(text)) {
+            // empty draft
+            app.displayWarningMessage("Text is empty")
+            context.fail("Text is empty")
+            return undefined
+        }
+
+        let d = new Draft()
+        d.content = text
+
+        // valid post, publish it
+        let statusUpdate = new MastodonTextStatusUpdate({
+            statusText: text,
+            visibility: visibility
+        })
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
+        if (result) {
+            addConfiguredTagsAndUrlToDraft(result, d);
+            app.displaySuccessMessage("published post")
+        } else {
+            context.fail()
+            app.displayErrorMessage("publishing text failed, try again")
+        }
+        return result
+    } else {
+        // post is not in limits, show character limit and abort publish
+        if (!isPostEmpty(text)) {
+            app.displayErrorMessage("post exceeds character limit")
+            Draftodon_showCharacterLimit()
+            context.fail()
+        } else {
+            app.displayWarningMessage("text is empty")
+            context.fail("text is empty")
+        }
+        return undefined
+    }
+}
+
 // post draft as single post
 function Draftodon_publishDraftAsSinglePost(visibility = "public") {
     if (!Draftodon_readSettingsIntoVars()) {
@@ -334,6 +513,9 @@ function Draftodon_publishDraftAsSinglePost(visibility = "public") {
     }
 
     let text = removeCharacterLimitIndicatorFromText(editor.getText())
+
+    let mastodon = getMastodonObjectFromSettings()
+
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
             // empty draft
@@ -347,7 +529,7 @@ function Draftodon_publishDraftAsSinglePost(visibility = "public") {
             statusText: text,
             visibility: visibility
         })
-        let result = mastodon_postStatusUpdate(statusUpdate)
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
         if (result) {
             addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published draft")
@@ -378,6 +560,9 @@ function Draftodon_scheduleDraftAsSinglePost(visibility = "public") {
         return undefined
     }
     let text = removeCharacterLimitIndicatorFromText(editor.getText())
+
+    let mastodon = getMastodonObjectFromSettings()
+
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
             // empty draft
@@ -394,7 +579,7 @@ function Draftodon_scheduleDraftAsSinglePost(visibility = "public") {
                 scheduledAt: scheduleDate.toISOString(),
                 visibility: visibility
             })
-            let result = mastodon_postStatusUpdate(statusUpdate)
+            let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
             if (result) {
                 let scheduledAtStr = getScheduledAtAsReadableString(result.scheduledAt)
                 app.displaySuccessMessage("scheduled post for " + scheduledAtStr)
@@ -475,6 +660,7 @@ function Draftodon_publishDraftAsPoll(visibility = "public") {
     }
 
     let text = removeCharacterLimitIndicatorFromText(editor.getText())
+    let mastodon = getMastodonObjectFromSettings()
 
     if (isPostEmpty(text)) {
         // empty draft
@@ -537,7 +723,7 @@ function Draftodon_publishDraftAsPoll(visibility = "public") {
             expiresIn: expiresIn,
             visibility: visibility
         })
-        let result = mastodon_postStatusUpdate(statusUpdate)
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
         if (result) {
             addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published poll")
@@ -563,6 +749,8 @@ function Draftodon_scheduleDraftAsPoll(visibility = "public") {
     }
 
     let text = removeCharacterLimitIndicatorFromText(editor.getText())
+
+    let mastodon = getMastodonObjectFromSettings()
 
     if (isPostEmpty(text)) {
         // empty draft
@@ -634,7 +822,7 @@ function Draftodon_scheduleDraftAsPoll(visibility = "public") {
             scheduledAt: scheduledDate.toISOString(),
             visibility: visibility
         })
-        let result = mastodon_postStatusUpdate(statusUpdate)
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
         if (result) {
             addConfiguredTagsAndUrlToDraft(result);
             let scheduledAtStr = getScheduledAtAsReadableString(result.scheduledAt)
@@ -662,6 +850,9 @@ function Draftodon_publishDraftWithContentWarning(visibility = "public") {
     }
 
     let text = removeCharacterLimitIndicatorFromText(editor.getText())
+
+    let mastodon = getMastodonObjectFromSettings()
+
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
             // empty draft
@@ -709,7 +900,7 @@ function Draftodon_publishDraftWithContentWarning(visibility = "public") {
             spoilerText: spoilerText,
             visibility: visibility
         })
-        let result = mastodon_postStatusUpdate(statusUpdate)
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
         if (result) {
             addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("published draft with content warning")
@@ -742,6 +933,9 @@ function Draftodon_scheduleDraftWithContentWarning(visibility = "public") {
     }
 
     let text = removeCharacterLimitIndicatorFromText(editor.getText())
+
+    let mastodon = getMastodonObjectFromSettings()
+
     if (isPostInLimits(text, 0)) {
         if (isPostEmpty(text)) {
             // empty draft
@@ -795,7 +989,7 @@ function Draftodon_scheduleDraftWithContentWarning(visibility = "public") {
             scheduledAt: scheduledDate.toISOString(),
             visibility: visibility
         })
-        let result = mastodon_postStatusUpdate(statusUpdate)
+        let result = mastodon_postStatusUpdate(statusUpdate, mastodon)
         if (result) {
             addConfiguredTagsAndUrlToDraft(result);
             app.displaySuccessMessage("scheduled draft with content warning")
@@ -1057,6 +1251,135 @@ function Draftodon_quotePost(visibility = "public") {
     }
 }
 
+function Draftodon_importStatus(importSource, hideOption) {
+    // validate importSource
+    const allowedImportSources = ["bookmarks", "favorites", "home"]
+    if (!allowedImportSources.includes(importSource)) {
+        alert("Draftodon_importStatus() used with unsupported value for \"importSource\". Valid values are:\n" + allowedImportSources.map(item => `- ${item}`).join("\n"))
+        return undefined
+    }
+    if (!Draftodon_readSettingsIntoVars()) {
+        return undefined
+    }
+    let mastodon = getMastodonObjectFromSettings()
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+
+    let getStatusesResult = []
+    let msgSourceIdentifierStr = ""
+    // evalidate importSource
+    switch (importSource) {
+        case "bookmarks":
+            getStatusesResult = mastodon_getBookmarks(mastodon);
+            msgSourceIdentifierStr = "bookmark";
+            break;
+        case "favorites":
+            getStatusesResult = mastodon_getFavorites(mastodon);
+            msgSourceIdentifierStr = "favorite";
+            break;
+        case "home":
+            getStatusesResult = mastodon_getHome(mastodon);
+            msgSourceIdentifierStr = "post";
+            break;
+    }
+
+    if (getStatusesResult.length == 0) {
+        // no scheduled posts
+        app.displayInfoMessage("no " + msgSourceIdentifierStr + "s found")
+        context.cancel()
+        return undefined
+    }
+
+    if (hideOption == "true") {
+        // remove all already imported bookmarks from the array
+        for (let i = 0; i < getStatusesResult.length; i++) {
+            // check if that bookmark is already imported
+            let curBookMark = getStatusesResult[i]
+            let text = "# " + curBookMark.toString()
+            let splits = text.split("\n")
+            splits.splice(1, 0, "");
+            let foundDrafts = Draft.queryByTitle(splits[0])
+            if (foundDrafts.length >= 1) {
+                // status already imported
+                // remove it from the array
+                getStatusesResult.splice(i, 1);
+                i--; // Decrement i to account for the removed element
+            }
+        }
+    }
+
+    let html = createHtml({
+        "type": "multiple_posts",
+        "posts": getStatusesResult,
+        "publishIntended": false,
+        "importIntended": true
+    })
+    previewHtml(html)
+
+    // read vars
+    let selectedIndex = context.previewValues["postToImport"];
+    if (selectedIndex) {
+        let statusToImport = getStatusesResult[selectedIndex - 1]
+        let theD = statusToImport.toDraft()
+
+        if (theD.uuid != draft.uuid) {
+            editor.load(theD)
+            return true
+        }
+    } else {
+        app.displayInfoMessage("no " + msgSourceIdentifierStr + " selected")
+        return true
+    }
+}
+
+function Draftodon_importBookmark(hideOption = "false") {
+    return Draftodon_importStatus("bookmarks", hideOption)
+}
+
+function Draftodon_importFavorite(hideOption = "false") {
+    return Draftodon_importStatus("favorites", hideOption)
+}
+
+function Draftodon_importFromHomeTimeline(hideOption = "false") {
+    return Draftodon_importStatus("home", hideOption)
+}
+/* testing purpose only - not working currently
+function Draftodon_importBoost(hideOption = "false"){
+    // /api/v1/accounts/:id/statuses
+    // /api/v1/accounts/lookup
+    // verify /api/v1/accounts/verify_credentials
+
+    
+    if (!Draftodon_readSettingsIntoVars()) {
+        return undefined
+    }
+    let mastodon = getMastodonObjectFromSettings()
+
+    let accountId = mastodon_getAccountId(mastodon)
+
+    if(!accountId){
+        return undefined
+    }
+
+    let accountStatuses = mastodon_getStatusesOfAccount(accountId, mastodon)
+    if(!accountStatuses){
+        return undefined
+    }
+    for(let status of accountStatuses){
+        if(status.reblogged){
+            //alert(JSON.stringify(status))
+            //let a = b
+        }
+    }
+    let reblogs = accountStatuses.filter((status) => status.reblogged)
+    alert(JSON.stringify(reblogs))
+}
+*/
+
 // helper functions (no drafts actions)
 
 // post publishing
@@ -1080,7 +1403,7 @@ function mastodon_postStatusUpdate(statusUpdate, mastodon = getMastodonObjectFro
     if (!response.success) {
         if (response.statusCode == 999) {
             console.log("Post Failed: " + response.statusCode + ", " + response.error)
-            alert("Post Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            alert("Post Failed, returned error:\n\"" + response.error + "\"\n\nMaybe Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
             context.fail()
             return undefined
         } else {
@@ -1317,10 +1640,198 @@ function mastodon_searchStatusFromUrl(statusUrl, mastodon = getMastodonObjectFro
     }
 }
 
+function mastodon_getBookmarks(mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+
+    // get scheduled statuses from API
+    let response = mastodon.request({
+        "path": MastodonEndpoints.BOOKMARKS,
+        "method": "GET"
+    })
+
+    if (!response.success) {
+        if (response.statusCode == 999) {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            alert("Request Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            context.fail()
+            return undefined
+        } else {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            context.fail()
+            return undefined
+        }
+    } else {
+        console.log("Request Succeeded: " + response.responseText)
+        let data = response.responseData
+
+        data.sort((a, b) => {
+            const dateA = new Date(a["created_at"])
+            const dateB = new Date(b["created_at"])
+            return dateB - dateA
+        })
+
+        return parseGetBookmarksStatusesResponse(data)
+        //	console.log(`Posted to Mastodon: ${response.responseData["url"]}`)
+    }
+}
+
+function mastodon_getFavorites(mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+
+    // get scheduled statuses from API
+    let response = mastodon.request({
+        "path": MastodonEndpoints.FAVORITES,
+        "method": "GET"
+    })
+
+    if (!response.success) {
+        if (response.statusCode == 999) {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            alert("Request Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            context.fail()
+            return undefined
+        } else {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            context.fail()
+            return undefined
+        }
+    } else {
+        console.log("Request Succeeded: " + response.responseText)
+        let data = response.responseData
+
+        data.sort((a, b) => {
+            const dateA = new Date(a["created_at"])
+            const dateB = new Date(b["created_at"])
+            return dateB - dateA
+        })
+
+        return parseGetBookmarksStatusesResponse(data)
+    }
+}
+
+function mastodon_getHome(mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+
+    // get scheduled statuses from API
+    let response = mastodon.request({
+        "path": MastodonEndpoints.HOME,
+        "method": "GET"
+    })
+
+    if (!response.success) {
+        if (response.statusCode == 999) {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            alert("Request Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            context.fail()
+            return undefined
+        } else {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            context.fail()
+            return undefined
+        }
+    } else {
+        console.log("Request Succeeded: " + response.responseText)
+        let data = response.responseData
+
+        data.sort((a, b) => {
+            const dateA = new Date(a["created_at"])
+            const dateB = new Date(b["created_at"])
+            return dateB - dateA
+        })
+
+        return parseGetBookmarksStatusesResponse(data)
+    }
+}
+
+
+function mastodon_getAccountId(mastodon = getMastodonObjectFromSettings()) {
+    if (!mastodon) {
+        console.log("no account was returned")
+        app.displayInfoMessage("no account selected")
+        context.cancel("cancelling since no account was selected")
+        return undefined
+    }
+
+    let response = mastodon.request({
+        "path": MastodonEndpoints.VERIFY,
+        "method": "GET"
+    })
+
+
+    if (!response.success) {
+        if (response.statusCode == 999) {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            alert("Request Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            context.fail()
+            return undefined
+        } else {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            context.fail()
+            return undefined
+        }
+    } else {
+        console.log("Request Succeeded: " + response.responseText)
+        let data = response.responseData
+        return data.id
+    }
+}
+
+// can only return 40 statuses as per API docs: https://docs.joinmastodon.org/methods/accounts/#statuses
+function mastodon_getStatusesOfAccount(accountId, mastodon) {
+    if (!mastodon) {
+        console.log("no account was given")
+        app.displayInfoMessage("no account given")
+        context.cancel("cancelling since no account was given")
+        return undefined
+    }
+
+    let path = "/api/v1/accounts/" + accountId + "/statuses"
+    let response = mastodon.request({
+        "path": path,
+        "method": "GET",
+        "parameters": {
+            "limit": 40
+        }
+    })
+
+    if (!response.success) {
+        if (response.statusCode == 999) {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            alert("Request Failed because Drafts was not authorized properly:\nPlease go into Drafts settings and navigate to \"Credentials\", search for \"Mastodon\" @" + DraftodonSettings.mastodonHandles + "\" and tap on \"Forget\” - then try posting again and it should authenticate you properly")
+            context.fail()
+            return undefined
+        } else {
+            console.log("Request Failed: " + response.statusCode + ", " + response.error)
+            context.fail()
+            return undefined
+        }
+    } else {
+        console.log("Request Succeeded: " + response.responseText)
+        let data = response.responseData
+        return data
+    }
+}
+
 // multiple accounts handling
 function getMastodonObjectFromSettings() {
     let instanceToUse = "";
     let handleToUse = "";
+    let index = 0
     // first check if multiple accounts are used
     if (DraftodonSettings.useMultipleAccounts) {
         // multiple accouns are used, ask the user to select the account
@@ -1338,12 +1849,14 @@ function getMastodonObjectFromSettings() {
             let selectedIndex = p.buttonPressed;
             instanceToUse = DraftodonSettings.mastodonInstances[selectedIndex]
             handleToUse = DraftodonSettings.mastodonHandles[selectedIndex]
+            index = selectedIndex
         }
     } else {
         // just use the first item in the settings since not mulitple accounts are used
         instanceToUse = DraftodonSettings.mastodonInstances[0]
         handleToUse = DraftodonSettings.mastodonHandles[0]
     }
+    DraftodonSettings.characterLimit = DraftodonSettings.characterLimits[index]
     let mastodon = Mastodon.create(instanceToUse, handleToUse)
     return mastodon
 }
@@ -1396,6 +1909,43 @@ function parseGetScheduledStatusesResponse(data) {
 
         //alert(JSON.stringify(obj))
         result.push(new MastodonScheduledStatus(obj))
+        count++
+    }
+    return result
+}
+
+// parse bookmarked statuses response
+function
+parseGetBookmarksStatusesResponse(data) {
+    let result = []
+    //app.setClipboard(JSON.stringify(scheduledPostsResponse))
+    let count = 0
+    for (post of data) {
+        let obj = {}
+
+        // in testing no "text" param was available, we use the content (which is html) and convert it to markdown)
+        let htmlContent = post["content"];
+        let htmlToMarkdown = new HTMLToMarkdown()
+        let mdContent = htmlToMarkdown.process(htmlContent)
+
+        obj["statusText"] = mdContent
+
+        obj["visibility"] = post["visibility"]
+        obj["created_at"] = post["created_at"]
+        obj["id"] = post["id"]
+        if (post["spoiler_text"]) {
+            obj["spoilerText"] = post["spoiler_text"]
+        }
+        if (post["sensitive"]) {
+            obj["sensitive"] = post["sensitive"]
+        }
+        obj["isPoll"] = post["isPoll"]
+        obj["pollOptions"] = post["pollOptions"]
+        obj["url"] = post["url"]
+        obj["account"] = post["account"]
+
+        //alert(JSON.stringify(obj))
+        result.push(new MastodonBookmarkedStatus(obj))
         count++
     }
     return result
@@ -1480,7 +2030,8 @@ function previewHtml(html) {
 function createHtml({
     type,
     posts,
-    publishIntended
+    publishIntended,
+    importIntended = false
 }) {
     let html = ["<html><head>"];
     html.push("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
@@ -1491,9 +2042,21 @@ function createHtml({
     html.push("p.invalid{ color: maroon; }\n");
     html.push("p.reply { border-left: 5px solid #bbb; }");
     html.push("p.preview{ font-style:italic; background-color: #444; color: #aaa; font-size: .9em; }\n");
+    //html.push(`.button-import {float: left;}\n`)
+    //html.push(`.button-import {position: absolute; bottom: 5px; right 5px;}\n`)
+    //html.push(`.button-import {float: right; margin-rigth: 20px; margin-bottom: 20px;}\n`)
     html.push("span.note{ background-color: maroon; color: white; font-weight: bold; border-radius:3px; padding: .25em; font-size: .8em; }\n");
     html.push("span.info{ background-color: grey; color: white; font-weight: bold; border-radius:3px; padding: .25em; font-size: .8em; }\n");
     html.push("</style>");
+    if (importIntended) {
+        html.push(`<script>
+        function importPost(post){
+            Drafts.send("postToImport", post);
+	        Drafts.continue();
+        }
+        </script>
+        `)
+    }
     html.push("</head><body>");
 
     if (publishIntended) {
@@ -1527,12 +2090,16 @@ function createHtml({
                     if (ctr > 1) {
                         obj["useReply"] = false
                     }
+                    if (importIntended) {
+                        obj["importIntended"] = true
+                    }
                     html.push(getPostAsHtml(obj))
                     ctr++
                 }
                 default:
                     break;
         }
+
     } else {
         if (publishIntended) {
             html.push("<p>Nothing to Publish</p>");
@@ -1558,7 +2125,8 @@ function getPostAsHtml({
     isValid = true,
     useReply = false,
     count = 1,
-    postAmount = 1
+    postAmount = 1,
+    importIntended = false
 }) {
     let html = [];
     let postStr = post.toString()
@@ -1572,7 +2140,9 @@ function getPostAsHtml({
         if (!count == 1 && postAmount == 1) {
             html.push(postsCountString(count, postAmount));
         }
-        html.push("</p>");
+        if (!importIntended) {
+            html.push("</p>");
+        }
     } else {
         html.push("<p class='invalid" + (count > 1 ? " reply" : "") + "'>");
         html.push("<span class='note'>" + postStr.length + " characters</span> ");
@@ -1581,6 +2151,10 @@ function getPostAsHtml({
             html.push(postsCountString(count, postAmount));
         }
         html.push("</p>");
+    }
+    if (importIntended) {
+        // add import button
+        html.push(`<input type="button" class="button-import" value="Import" id="import${count}" onclick="importPost(${count});" />`)
     }
     return html.join("\n")
 }
@@ -1627,16 +2201,25 @@ function Draftodon_readSettingsIntoVars() {
             return item
         }
     })
-    if (configuredHandles.length != configuredInstances.length) {
+
+    // get character limits
+    const mastodonCharacterLimitSetting = draft.processTemplate("[[character_limits]]").trim()
+    let configuredCharacterLimits = []
+    for (let charLimit of mastodonCharacterLimitSetting.split("\n")) {
+        configuredCharacterLimits.push(parseInt(charLimit))
+    }
+    DraftodonSettings.characterLimits = configuredCharacterLimits
+
+    if (configuredHandles.length !== configuredInstances.length || configuredHandles.length !== configuredCharacterLimits.length) {
         // the user did not configure the same amount of handles compared to the instances
-        alert("ERROR:\nThe amount of configured instances and handles must match\nYou configured " + configuredInstances.length + " instance(s) and " + configuredHandles.length + " handle(s):\n\nconfigured instance(s):\n" + configuredInstances.join("\n") + "\n\nconfigured handle(s):\n" + configuredHandles.join("\n"))
+        alert("ERROR:\nThe amount of configured instances, handles and character limits must match\nYou configured " + configuredInstances.length + " instance(s), " + configuredHandles.length + " handle(s) and " + configuredCharacterLimits.length + " character limit(s):\n\nconfigured instance(s):\n" + configuredInstances.join("\n") + "\n\nconfigured handle(s):\n" + configuredHandles.join("\n") + "\n\nconfigured character limit(s):\n" + configuredCharacterLimits.join("\n"))
         app.displayErrorMessage("Instance and Handle amount must match")
         context.fail()
         return false
     }
     DraftodonSettings.mastodonHandles = configuredHandles
 
-    DraftodonSettings.characterLimit = parseInt(draft.processTemplate("[[character_limit]]"))
+
     DraftodonSettings.characterLimitIndicator = draft.processTemplate("[[character_limit_indicator]]")
     DraftodonSettings.threadDivider = draft.processTemplate("[[thread_divider]]")
     let tagsToAddOnSuccess = []
@@ -1665,20 +2248,22 @@ function createPostCountString(curPosition, length) {
     return "[" + curPosition + "/" + length + "]"
 }
 
-function addConfiguredTagsAndUrlToDraft(postResult = undefined) {
+function addConfiguredTagsAndUrlToDraft(postResult = undefined, draftToUse = draft) {
     if (!Draftodon_readSettingsIntoVars()) {
         return undefined
     }
     if (DraftodonSettings.tagsToAddOnSuccess.length > 0) {
         for (tag of DraftodonSettings.tagsToAddOnSuccess) {
-            draft.addTag(tag)
+            draftToUse.addTag(tag)
         }
     }
     if (postResult.url) {
         //alert(postResult.url)
-        draft.append("[public url](" + postResult.url + ")", "\n\n")
+        draftToUse.append("[public url](" + postResult.url + ")", "\n\n")
     }
-    draft.update()
+    draftToUse.isArchived = true;
+    draftToUse.update()
+    editor.load(draftToUse)
 }
 
 function getScheduledAtAsReadableString(scheduledDate) {
@@ -1786,6 +2371,19 @@ function isValidVisibility(visibility) {
         alert("ERROR:\n\nThe configured visibility \"" + visibility + "\" is not valid. Please update the configured visibility in the \"Define Template# Tag\" step of the Action to one of the following values:\npublic = Visible to everyone, shown in public timelines.\nunlisted = Visible to public, but not included in public timelines.\nprivate = Visible to followers only, and to any mentioned users.\ndirect = Visible only to mentioned users.")
         context.fail()
         return false
+    }
+
+}
+
+function getCharacterLimitFromInstance() {
+    // if all elements are equal we don't need to ask the user anything
+    if (DraftodonSettings.characterLimits.every(element => element === DraftodonSettings.characterLimits[0])) {
+        DraftodonSettings.characterLimit = DraftodonSettings.characterLimits[0]
+        return DraftodonSettings.characterLimit
+    } else {
+        //let the user select an instance
+        getMastodonObjectFromSettings()
+        return DraftodonSettings.characterLimit
     }
 
 }

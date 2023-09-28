@@ -10,10 +10,12 @@ The following settings have to be defined by each user if the default values sho
 
 **Mastodon instance & handle**
 - `mastodon_instance`: your mastodon instance e.g. `mastodon.social`; Default: `UNDEFINED`
-- `mastodon_handle`: your mastodon user handle on the defined instance e.g. `@FlohGro` for `@FlohGro@mastodon.social`; Default: `UNDEFINED`
+- `mastodon_handle`: your mastodon user handle on the defined instance e.g. `@FlohGro` for `@FlohGro@social.lol`; Default: `UNDEFINED`
+- `character_limit`: the character limit for one post / toot on your instance; Default: `500`
+
+> note: if you want to use Draftodon with multiple accounts, please read the instructions by running the `Draftodon Instructions` action.
 
 **compose settings**
-- `character_limit`: the character limit for one post / toot on your instance; Default: `500`
 - `character_limit_indicator`: some actions allow you to check the character limit in a Draft. therefore they insert an emoji that will show you the position where you exceed the limit, you can redifine the emoji if you want; Default: 🛑
 - `thread_divider`: the characters that divide posts in a Thread you want to post; the defined characters have to be in a single line between two posts of the thread; Default: `===`
 - `tags-to-add-on-successfull-publish`: if you want to add tags to the drafts that successfully were published / scheduled to mastodon, you can add them here - every action that publishes something to mastodon will add the tags to the draft if they where published successfully. The tags have to be defined as comma separated string; Default: `` (no tags)
@@ -191,6 +193,55 @@ If you run this the first time, you will need to authenticate Drafts for your ac
 
 > After Success Setting: *Archive*
 
+## post status from prompt
+
+This Action will display a prompt with a text field where you can put in the text for a status you want to post. The text you type into this pormpt will be published to your account. 
+The Action creates a new Draft which contains the published post.
+
+> After Success Setting: *Do Nothing*
+
+## post draft with hashtags
+
+This Action is similar to the `post draft` action. It extends it by automatically appending preconfigured hashtags to content of the current Draft.
+It is especially useful if you often post statuses with the same hashtags.
+
+To configure the hashtags that the action should append you need to edit it. The first "Define Template Tag" `hashtags-to-append` step defines the used hashtags. You can configure one or more hashtags but each of them must be in a separate line. E.g. if you want to post the draft with the hashtags #Draftodon #Drafts #iOS you need to configure the Template Tag as follows:
+
+```text
+Draftodon
+Drafts
+iOS
+```
+
+> note: you don't need to add the `#` character, this will be done automatically.
+
+You can of course duplicate the action and configure different hashtags in each copy - make sure to rename the actions to don't get confused.
+
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
+
+> After Success Setting: *Archive*
+
+## schedule draft with hashtags
+
+This Action is similar to the `schedule draft` action. It extends it by automatically appending preconfigured hashtags to content of the current Draft.
+It is especially useful if you often schedule statuses with the same hashtags.
+
+To configure the hashtags that the action should append you need to edit it. The first "Define Template Tag" `hashtags-to-append` step defines the used hashtags. You can configure one or more hashtags but each of them must be in a separate line. E.g. if you want to post the draft with the hashtags #Draftodon #Drafts #iOS you need to configure the Template Tag as follows:
+
+```text
+Draftodon
+Drafts
+iOS
+```
+
+> note: you don't need to add the `#` character, this will be done automatically.
+
+You can of course duplicate the action and configure different hashtags in each copy - make sure to rename the actions to don't get confused.
+
+The Action contains the "Template Tag" `post-visibility`, which allows to specify the visibility of the published post and defaults to `public`. You can find information about supported visibilities by opening the Draftodon Instructions.
+
+> After Success Setting: *Archive*
+
 ## post draft as thread
 
 This Action allows you to post a Thread to mastodon. 
@@ -229,6 +280,36 @@ The displayed posts will be sorted by the scheduled data, so the first post in t
 
 This Action retrieves all scheduled posts from your mastodon account and shows a prompt with their status update texts. If you select one of them you can choose to reshedule the selected post or delete it.
 This Action works best together with the show scheduled posts action - first run this to check your scheduled posts and then edit the posts you want to change.
+
+> After Success Setting: *Do Nothing*
+
+## import bookmark
+
+This Action allows you to import bookmarked statuses from your account. It will retrieve them from mastodon and present them in a HTML preview. Each status in the preview will contain a small import button. When you tap / click that button the status will be imported as new draft.
+
+The Action allows you to hide already imported statuses in the HTML preview. This works based on the title of the created drafts. Since I think that this will often be edited I disabled it by default. If you don't plan to edit the titles of the imported statuses you can enable it by changing the "Template Tag" `hide-already-imported` from `false` to `true`. This might slow down the creation of the HTML preview so play around with it and decide what you prefer
+
+If you want to automatically assign tags to the imported drafts please use the "After Success" setting of the action.
+
+> After Success Setting: *Do Nothing*
+
+## import favorite
+
+This Action allows you to import favorited statuses from your account. It will retrieve them from mastodon and present them in a HTML preview. Each status in the preview will contain a small import button. When you tap / click that button the status will be imported as new draft.
+
+The Action allows you to hide already imported statuses in the HTML preview. This works based on the title of the created drafts. Since I think that this will often be edited I disabled it by default. If you don't plan to edit the titles of the imported statuses you can enable it by changing the "Template Tag" `hide-already-imported` from `false` to `true`. This might slow down the creation of the HTML preview so play around with it and decide what you prefer
+
+If you want to automatically assign tags to the imported drafts please use the "After Success" setting of the action.
+
+> After Success Setting: *Do Nothing*
+
+## import from home timeline
+
+This Action allows you to import statuses from your accounts home timeline. It will retrieve the 20 newest statuses from mastodon and present them in a HTML preview. Each status in the preview will contain a small import button. When you tap / click that button the status will be imported as new draft.
+
+The Action allows you to hide already imported statuses in the HTML preview. This works based on the title of the created drafts. Since I think that this will often be edited I disabled it by default. If you don't plan to edit the titles of the imported statuses you can enable it by changing the "Template Tag" `hide-already-imported` from `false` to `true`. This might slow down the creation of the HTML preview so play around with it and decide what you prefer
+
+If you want to automatically assign tags to the imported drafts please use the "After Success" setting of the action.
 
 > After Success Setting: *Do Nothing*
 
