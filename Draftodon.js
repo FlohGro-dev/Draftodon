@@ -451,7 +451,7 @@ function Draftodon_postStatusFromPrompt(visibility = "public") {
     }
 
     let p = new Prompt()
-    p.title = "insert text for post"
+    p.title = "insert status text"
     p.addTextView("postText", "", "", {
         wantsFocus: true
     })
@@ -2140,7 +2140,9 @@ function getPostAsHtml({
         if (!count == 1 && postAmount == 1) {
             html.push(postsCountString(count, postAmount));
         }
-        html.push("</p>");
+        if (!importIntended){
+            html.push("</p>");
+        }
     } else {
         html.push("<p class='invalid" + (count > 1 ? " reply" : "") + "'>");
         html.push("<span class='note'>" + postStr.length + " characters</span> ");
